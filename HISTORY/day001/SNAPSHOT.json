@@ -1,0 +1,27 @@
+{
+  "schema": "airidl.snapshot/v1",
+  "day": "day001",
+  "parent": null,
+  "project_version": "0.1.0.dev1",
+  "created_at": "2026-08-27T17:27:06+08:00",
+  "source": {
+    "kind": "orphan",
+    "previous_main": "298ea9a3dcf2f28af9235366664d8784a8fa92f2",
+    "canonical_file_count": 26,
+    "patch_base": "empty-tree"
+  },
+  "contracts": {
+    "manifest_excludes": ["MANIFEST.sha256"],
+    "patch_excludes": ["HISTORY metadata"],
+    "external_cache_required": false,
+    "symlinks_allowed": false
+  },
+  "verification": {
+    "host": "macOS 15.5 arm64",
+    "python": "3.12.13",
+    "cmake": "4.3.3",
+    "compiler": "AppleClang 17.0.0",
+    "cuda": "not-available",
+    "formal_ubuntu_rtx5090": "not-run"
+  }
+}

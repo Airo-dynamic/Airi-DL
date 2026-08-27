@@ -1,0 +1,43 @@
+schema_version = 1
+frozen_at = "2026-08-27"
+
+[project]
+name = "Airi-DL"
+version = "0.1.0.dev1"
+snapshot = "day001"
+license = "Apache-2.0"
+
+[formal_target]
+os = "Ubuntu 24.04 LTS"
+architecture = "x86_64"
+python = "3.12"
+cpp_standard = 20
+gcc = "13.3.0"
+cmake = "3.28.3"
+cmake_min = "3.28"
+ninja = "1.11.1"
+ninja_min = "1.11"
+cuda_toolkit = "13.0.3"
+cuda_series = "13.0"
+cuda_driver_min = "580.126.20"
+cuda_architectures = ["sm_120", "compute_120"]
+pytorch = "2.13.0"
+pytorch_wheel = "cu130"
+pytorch_build_cuda = "13.0.2"
+pytorch_bundled_cudnn = "9.20.0.48"
+pytorch_bundled_nccl = "2.29.7"
+
+[experimental]
+pytorch_wheel = "cu132"
+note = "CUDA 13.2 is experimental in PyTorch 2.13 and is not the baseline"
+
+[bootstrap_tools]
+uv = "0.12.6"
+hatchling = "1.32.0"
+ruff = "0.16.4"
+mypy = "2.3.1"
+pytest = "9.1.1"
+
+[development_host]
+purpose = "CPU bootstrap only; it is not CUDA or performance evidence"
+supported_systems = ["Linux", "Darwin"]

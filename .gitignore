@@ -1,0 +1,34 @@
+# Local reference material: never stage or publish.
+/BACKGROUND/
+
+# Build and dependency state.
+/build/
+/dist/
+/.venv/
+/.uv-cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+compile_commands.json
+
+# Data, models, credentials, and generated evidence.
+/artifacts/
+/data/
+/models/
+/traces/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.safetensors
+*.pt
+*.pth
+
+# Editor and operating-system files.
+.DS_Store
+.idea/
+.vscode/
+*~

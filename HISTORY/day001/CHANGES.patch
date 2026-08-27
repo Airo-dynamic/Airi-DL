@@ -1,0 +1,1840 @@
+diff --git a/.editorconfig b/.editorconfig
+new file mode 100644
+index 0000000..68cacbf
+--- /dev/null
++++ b/.editorconfig
+@@ -0,0 +1,15 @@
++root = true
++
++[*]
++charset = utf-8
++end_of_line = lf
++insert_final_newline = true
++indent_style = space
++indent_size = 4
++trim_trailing_whitespace = true
++
++[*.{json,toml,yaml,yml}]
++indent_size = 2
++
++[Makefile]
++indent_style = tab
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..573a036
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1,8 @@
++* text=auto eol=lf
++*.bat text eol=crlf
++*.png binary
++*.jpg binary
++*.jpeg binary
++*.gif binary
++*.pdf binary
++*.safetensors binary
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..d72166d
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,34 @@
++# Local reference material: never stage or publish.
++/BACKGROUND/
++
++# Build and dependency state.
++/build/
++/dist/
++/.venv/
++/.uv-cache/
++__pycache__/
++*.py[cod]
++.pytest_cache/
++.mypy_cache/
++.ruff_cache/
++compile_commands.json
++
++# Data, models, credentials, and generated evidence.
++/artifacts/
++/data/
++/models/
++/traces/
++.env
++.env.*
++!.env.example
++*.pem
++*.key
++*.safetensors
++*.pt
++*.pth
++
++# Editor and operating-system files.
++.DS_Store
++.idea/
++.vscode/
++*~
+diff --git a/.python-version b/.python-version
+new file mode 100644
+index 0000000..e4fba21
+--- /dev/null
++++ b/.python-version
+@@ -0,0 +1 @@
++3.12
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+new file mode 100644
+index 0000000..7a9d931
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,37 @@
++cmake_minimum_required(VERSION 3.28)
++
++project(AiriDL VERSION 0.1.0 LANGUAGES CXX)
++set(CMAKE_CXX_EXTENSIONS OFF)
++
++include(CTest)
++
++option(AIRIDL_ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
++
++add_library(airidl_core STATIC cpp/runtime/version.cpp)
++add_library(airidl::core ALIAS airidl_core)
++target_compile_features(airidl_core PUBLIC cxx_std_20)
++target_include_directories(
++    airidl_core
++    PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>"
++)
++
++if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
++    target_compile_options(airidl_core PRIVATE -Wall -Wextra -Wpedantic)
++    if(AIRIDL_ENABLE_SANITIZERS)
++        target_compile_options(airidl_core PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
++        target_link_options(airidl_core PUBLIC -fsanitize=address,undefined)
++    endif()
++elseif(MSVC)
++    target_compile_options(airidl_core PRIVATE /W4)
++endif()
++
++if(BUILD_TESTING)
++    add_executable(airidl_core_test cpp/tests/version_test.cpp)
++    target_link_libraries(airidl_core_test PRIVATE airidl::core)
++    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
++        target_compile_options(airidl_core_test PRIVATE -Wall -Wextra -Wpedantic)
++    elseif(MSVC)
++        target_compile_options(airidl_core_test PRIVATE /W4)
++    endif()
++    add_test(NAME cpp.core_version COMMAND airidl_core_test)
++endif()
+diff --git a/CMakePresets.json b/CMakePresets.json
+new file mode 100644
+index 0000000..5f84ef7
+--- /dev/null
++++ b/CMakePresets.json
+@@ -0,0 +1,32 @@
++{
++  "version": 6,
++  "cmakeMinimumRequired": {"major": 3, "minor": 28, "patch": 0},
++  "configurePresets": [
++    {
++      "name": "dev",
++      "displayName": "Debug development build",
++      "generator": "Ninja",
++      "binaryDir": "${sourceDir}/build/dev",
++      "cacheVariables": {
++        "BUILD_TESTING": "ON",
++        "CMAKE_BUILD_TYPE": "Debug",
++        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
++      }
++    },
++    {
++      "name": "asan",
++      "displayName": "AddressSanitizer and UBSan build",
++      "inherits": "dev",
++      "binaryDir": "${sourceDir}/build/asan",
++      "cacheVariables": {"AIRIDL_ENABLE_SANITIZERS": "ON"}
++    }
++  ],
++  "buildPresets": [
++    {"name": "dev", "configurePreset": "dev"},
++    {"name": "asan", "configurePreset": "asan"}
++  ],
++  "testPresets": [
++    {"name": "dev", "configurePreset": "dev", "output": {"outputOnFailure": true}},
++    {"name": "asan", "configurePreset": "asan", "output": {"outputOnFailure": true}}
++  ]
++}
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..d645695
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,202 @@
++
++                                 Apache License
++                           Version 2.0, January 2004
++                        http://www.apache.org/licenses/
++
++   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++   1. Definitions.
++
++      "License" shall mean the terms and conditions for use, reproduction,
++      and distribution as defined by Sections 1 through 9 of this document.
++
++      "Licensor" shall mean the copyright owner or entity authorized by
++      the copyright owner that is granting the License.
++
++      "Legal Entity" shall mean the union of the acting entity and all
++      other entities that control, are controlled by, or are under common
++      control with that entity. For the purposes of this definition,
++      "control" means (i) the power, direct or indirect, to cause the
++      direction or management of such entity, whether by contract or
++      otherwise, or (ii) ownership of fifty percent (50%) or more of the
++      outstanding shares, or (iii) beneficial ownership of such entity.
++
++      "You" (or "Your") shall mean an individual or Legal Entity
++      exercising permissions granted by this License.
++
++      "Source" form shall mean the preferred form for making modifications,
++      including but not limited to software source code, documentation
++      source, and configuration files.
++
++      "Object" form shall mean any form resulting from mechanical
++      transformation or translation of a Source form, including but
++      not limited to compiled object code, generated documentation,
++      and conversions to other media types.
++
++      "Work" shall mean the work of authorship, whether in Source or
++      Object form, made available under the License, as indicated by a
++      copyright notice that is included in or attached to the work
++      (an example is provided in the Appendix below).
++
++      "Derivative Works" shall mean any work, whether in Source or Object
++      form, that is based on (or derived from) the Work and for which the
++      editorial revisions, annotations, elaborations, or other modifications
++      represent, as a whole, an original work of authorship. For the purposes
++      of this License, Derivative Works shall not include works that remain
++      separable from, or merely link (or bind by name) to the interfaces of,
++      the Work and Derivative Works thereof.
++
++      "Contribution" shall mean any work of authorship, including
++      the original version of the Work and any modifications or additions
++      to that Work or Derivative Works thereof, that is intentionally
++      submitted to Licensor for inclusion in the Work by the copyright owner
++      or by an individual or Legal Entity authorized to submit on behalf of
++      the copyright owner. For the purposes of this definition, "submitted"
++      means any form of electronic, verbal, or written communication sent
++      to the Licensor or its representatives, including but not limited to
++      communication on electronic mailing lists, source code control systems,
++      and issue tracking systems that are managed by, or on behalf of, the
++      Licensor for the purpose of discussing and improving the Work, but
++      excluding communication that is conspicuously marked or otherwise
++      designated in writing by the copyright owner as "Not a Contribution."
++
++      "Contributor" shall mean Licensor and any individual or Legal Entity
++      on behalf of whom a Contribution has been received by Licensor and
++      subsequently incorporated within the Work.
++
++   2. Grant of Copyright License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      copyright license to reproduce, prepare Derivative Works of,
++      publicly display, publicly perform, sublicense, and distribute the
++      Work and such Derivative Works in Source or Object form.
++
++   3. Grant of Patent License. Subject to the terms and conditions of
++      this License, each Contributor hereby grants to You a perpetual,
++      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++      (except as stated in this section) patent license to make, have made,
++      use, offer to sell, sell, import, and otherwise transfer the Work,
++      where such license applies only to those patent claims licensable
++      by such Contributor that are necessarily infringed by their
++      Contribution(s) alone or by combination of their Contribution(s)
++      with the Work to which such Contribution(s) was submitted. If You
++      institute patent litigation against any entity (including a
++      cross-claim or counterclaim in a lawsuit) alleging that the Work
++      or a Contribution incorporated within the Work constitutes direct
++      or contributory patent infringement, then any patent licenses
++      granted to You under this License for that Work shall terminate
++      as of the date such litigation is filed.
++
++   4. Redistribution. You may reproduce and distribute copies of the
++      Work or Derivative Works thereof in any medium, with or without
++      modifications, and in Source or Object form, provided that You
++      meet the following conditions:
++
++      (a) You must give any other recipients of the Work or
++          Derivative Works a copy of this License; and
++
++      (b) You must cause any modified files to carry prominent notices
++          stating that You changed the files; and
++
++      (c) You must retain, in the Source form of any Derivative Works
++          that You distribute, all copyright, patent, trademark, and
++          attribution notices from the Source form of the Work,
++          excluding those notices that do not pertain to any part of
++          the Derivative Works; and
++
++      (d) If the Work includes a "NOTICE" text file as part of its
++          distribution, then any Derivative Works that You distribute must
++          include a readable copy of the attribution notices contained
++          within such NOTICE file, excluding those notices that do not
++          pertain to any part of the Derivative Works, in at least one
++          of the following places: within a NOTICE text file distributed
++          as part of the Derivative Works; within the Source form or
++          documentation, if provided along with the Derivative Works; or,
++          within a display generated by the Derivative Works, if and
++          wherever such third-party notices normally appear. The contents
++          of the NOTICE file are for informational purposes only and
++          do not modify the License. You may add Your own attribution
++          notices within Derivative Works that You distribute, alongside
++          or as an addendum to the NOTICE text from the Work, provided
++          that such additional attribution notices cannot be construed
++          as modifying the License.
++
++      You may add Your own copyright statement to Your modifications and
++      may provide additional or different license terms and conditions
++      for use, reproduction, or distribution of Your modifications, or
++      for any such Derivative Works as a whole, provided Your use,
++      reproduction, and distribution of the Work otherwise complies with
++      the conditions stated in this License.
++
++   5. Submission of Contributions. Unless You explicitly state otherwise,
++      any Contribution intentionally submitted for inclusion in the Work
++      by You to the Licensor shall be under the terms and conditions of
++      this License, without any additional terms or conditions.
++      Notwithstanding the above, nothing herein shall supersede or modify
++      the terms of any separate license agreement you may have executed
++      with Licensor regarding such Contributions.
++
++   6. Trademarks. This License does not grant permission to use the trade
++      names, trademarks, service marks, or product names of the Licensor,
++      except as required for reasonable and customary use in describing the
++      origin of the Work and reproducing the content of the NOTICE file.
++
++   7. Disclaimer of Warranty. Unless required by applicable law or
++      agreed to in writing, Licensor provides the Work (and each
++      Contributor provides its Contributions) on an "AS IS" BASIS,
++      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++      implied, including, without limitation, any warranties or conditions
++      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++      PARTICULAR PURPOSE. You are solely responsible for determining the
++      appropriateness of using or redistributing the Work and assume any
++      risks associated with Your exercise of permissions under this License.
++
++   8. Limitation of Liability. In no event and under no legal theory,
++      whether in tort (including negligence), contract, or otherwise,
++      unless required by applicable law (such as deliberate and grossly
++      negligent acts) or agreed to in writing, shall any Contributor be
++      liable to You for damages, including any direct, indirect, special,
++      incidental, or consequential damages of any character arising as a
++      result of this License or out of the use or inability to use the
++      Work (including but not limited to damages for loss of goodwill,
++      work stoppage, computer failure or malfunction, or any and all
++      other commercial damages or losses), even if such Contributor
++      has been advised of the possibility of such damages.
++
++   9. Accepting Warranty or Additional Liability. While redistributing
++      the Work or Derivative Works thereof, You may choose to offer,
++      and charge a fee for, acceptance of support, warranty, indemnity,
++      or other liability obligations and/or rights consistent with this
++      License. However, in accepting such obligations, You may act only
++      on Your own behalf and on Your sole responsibility, not on behalf
++      of any other Contributor, and only if You agree to indemnify,
++      defend, and hold each Contributor harmless for any liability
++      incurred by, or claims asserted against, such Contributor by reason
++      of your accepting any such warranty or additional liability.
++
++   END OF TERMS AND CONDITIONS
++
++   APPENDIX: How to apply the Apache License to your work.
++
++      To apply the Apache License to your work, attach the following
++      boilerplate notice, with the fields enclosed by brackets "[]"
++      replaced with your own identifying information. (Don't include
++      the brackets!)  The text should be enclosed in the appropriate
++      comment syntax for the file format. We also recommend that a
++      file or class name and description of purpose be included on the
++      same "printed page" as the copyright notice for easier
++      identification within third-party archives.
++
++   Copyright [yyyy] [name of copyright owner]
++
++   Licensed under the Apache License, Version 2.0 (the "License");
++   you may not use this file except in compliance with the License.
++   You may obtain a copy of the License at
++
++       http://www.apache.org/licenses/LICENSE-2.0
++
++   Unless required by applicable law or agreed to in writing, software
++   distributed under the License is distributed on an "AS IS" BASIS,
++   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++   See the License for the specific language governing permissions and
++   limitations under the License.
+diff --git a/Makefile b/Makefile
+new file mode 100644
+index 0000000..5b9aecc
+--- /dev/null
++++ b/Makefile
+@@ -0,0 +1,41 @@
++.DEFAULT_GOAL := help
++
++UV ?= uv
++PROFILE ?= auto
++
++.PHONY: help sync doctor lint typecheck py-test configure build cpp-test sanitize check
++
++help:
++	@echo "Airi-DL day001 targets: sync doctor lint typecheck py-test build cpp-test sanitize check"
++
++sync:
++	$(UV) sync --frozen
++
++doctor:
++	$(UV) run airidl doctor --profile $(PROFILE)
++
++lint:
++	$(UV) run ruff check src tests
++	$(UV) run ruff format --check src tests
++
++typecheck:
++	$(UV) run mypy src tests
++
++py-test:
++	$(UV) run pytest
++
++configure:
++	$(UV) run cmake --preset dev
++
++build: configure
++	$(UV) run cmake --build --preset dev
++
++cpp-test: build
++	$(UV) run ctest --preset dev
++
++sanitize:
++	$(UV) run cmake --preset asan
++	$(UV) run cmake --build --preset asan
++	$(UV) run ctest --preset asan
++
++check: lint typecheck py-test cpp-test sanitize
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..34cbac5
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,75 @@
++# Airi-DL
++
++> 可逐日手写复现的 ML Systems 教学实验室。当前稳定快照：`day001`。
++
++Airi-DL 用同一个 Llama-like TinyStories Decoder 串起单卡训练、多 GPU 并行、S3
++checkpoint 与容错、C++/CUDA 推理、在线服务和调度实验。项目从 2026-08-27 起重启；
++旧 OriginDL/PNNX 实现不属于新主线。
++
++## day001 做了什么
++
++- 建立 Python 3.12 `src` layout、C++20 静态库和无第三方依赖的 CTest。
++- 锁定 bootstrap 工具与正式 Ubuntu/RTX 5090 目标环境。
++- 提供只读的 `airidl doctor`，明确区分 CPU 开发宿主和正式 CUDA 环境。
++- 首个 `HISTORY/day001` 是可复制到仓库外独立构建的完整快照。
++
++本日没有实现 Tensor、PyTorch、CUDA kernel、分布式训练或推理服务；缺少这些功能
++不是测试跳过，而是 day001 的明确非目标。
++
++## 快速开始
++
++需要 Python 3.12、CMake 3.28+ 和 C++20 编译器。Ninja 由开发依赖提供。
++
++```bash
++python3.12 -m pip install --user uv==0.12.6
++uv sync --frozen
++uv run airidl doctor --json
++make check
++```
++
++当前 macOS arm64 只承担 CPU bootstrap；正式目标是 Ubuntu 24.04 x86_64、GCC 13、
++CUDA Toolkit 13.0.3、PyTorch 2.13.0/cu130 和 `sm_120`。在非正式宿主上通过测试不等于
++RTX 5090/CUDA 已验证。
++
++从仓库根复制快照：
++
++```bash
++snapshot_dir="$(mktemp -d)/airidl-day001"
++cp -R HISTORY/day001 "$snapshot_dir"
++cd "$snapshot_dir"
++```
++
++若你正在阅读已经复制出的 `day001`，跳过上面三行，直接在当前目录运行：
++
++```bash
++python3.12 -c 'from pathlib import Path; m={line.split(maxsplit=1)[1].removeprefix("./") for line in Path("MANIFEST.sha256").read_text().splitlines()}; a={str(p).removeprefix("./") for p in Path(".").rglob("*") if p.is_file()}; assert a == m | {"MANIFEST.sha256"}, (a-m, m-a)'
++if command -v sha256sum >/dev/null; then sha256sum -c MANIFEST.sha256; else shasum -a 256 -c MANIFEST.sha256; fi
++uv sync --frozen
++make check
++```
++
++## 目录
++
++```text
++src/airidl/             Python CLI 与未来训练控制面
++cpp/include/airidl/     C++ 公共头文件
++cpp/runtime/            Torch-free runtime（day001 仅版本契约）
++cpp/tests/              CTest
++env/versions.toml       正式目标与 bootstrap 版本
++docs/                   审计、ADR、路线和开发日志
++HISTORY/dayNNN/         冻结的完整学习快照
++```
++
++参阅 [day001 开发日志](docs/devlogs/day001.md)、
++[80+12 天路线](docs/roadmap/80-plus-12-days.md) 和
++[重启前审计](docs/audit/pre-reboot-2026-08-27.md)。
++
++## English
++
++Airi-DL is a day-by-day, hand-reproducible ML systems laboratory. Day 001 establishes
++a Python 3.12/C++20 build, a read-only environment doctor, locked bootstrap tools, and
++the first standalone history snapshot. CUDA, PyTorch, training, distributed execution,
++and serving deliberately begin on later days. The production target is Ubuntu 24.04
++x86_64 with an RTX 5090; macOS is a CPU-only bootstrap host.
++
++Licensed under Apache-2.0.
+diff --git a/cpp/include/airidl/version.hpp b/cpp/include/airidl/version.hpp
+new file mode 100644
+index 0000000..c96476a
+--- /dev/null
++++ b/cpp/include/airidl/version.hpp
+@@ -0,0 +1,12 @@
++#pragma once
++
++#include <string_view>
++
++namespace airidl {
++
++inline constexpr std::string_view kProjectName{"Airi-DL"};
++inline constexpr std::string_view kSnapshot{"day001"};
++
++[[nodiscard]] std::string_view Version() noexcept;
++
++}  // namespace airidl
+diff --git a/cpp/runtime/version.cpp b/cpp/runtime/version.cpp
+new file mode 100644
+index 0000000..d4f99df
+--- /dev/null
++++ b/cpp/runtime/version.cpp
+@@ -0,0 +1,7 @@
++#include "airidl/version.hpp"
++
++namespace airidl {
++
++std::string_view Version() noexcept { return "0.1.0.dev1"; }
++
++}  // namespace airidl
+diff --git a/cpp/tests/version_test.cpp b/cpp/tests/version_test.cpp
+new file mode 100644
+index 0000000..8e4ac6a
+--- /dev/null
++++ b/cpp/tests/version_test.cpp
+@@ -0,0 +1,12 @@
++#include "airidl/version.hpp"
++
++#include <iostream>
++
++int main() {
++    if (airidl::kProjectName != "Airi-DL" || airidl::kSnapshot != "day001" ||
++        airidl::Version() != "0.1.0.dev1") {
++        std::cerr << "Airi-DL version contract failed\n";
++        return 1;
++    }
++    return 0;
++}
+diff --git a/docs/adr/0001-pytorch-first-reboot.md b/docs/adr/0001-pytorch-first-reboot.md
+new file mode 100644
+index 0000000..e7b727b
+--- /dev/null
++++ b/docs/adr/0001-pytorch-first-reboot.md
+@@ -0,0 +1,23 @@
++# ADR 0001：以 PyTorch-first 方式重启
++
++- 状态：Accepted
++- 日期：2026-08-27
++
++## 背景
++
++旧工程同时维护通用 Tensor/Autograd、多个 Mat backend、PNNX 和两套分叉的每日代码。
++这些工作无法形成 DDP/FSDP2、可靠 checkpoint 或 LLM serving 的连续证据链。
++
++## 决策
++
++1. 新历史从 day001 开始，不继承 OriginDL、PNNX 或 `.odl` API。
++2. PyTorch 是模型、Autograd、训练和官方分布式实现的正确性参照。
++3. 自研范围聚焦 Torch-free C++/CUDA kernel core、通信实验、checkpoint 协议、
++   inference runtime、Paged KV、调度和可观测性。
++4. 同一个 TinyStories Decoder 和 ModelBundle 契约贯穿训练与推理。
++5. 每个 day 先通过验收再冻结；未在真实硬件运行的能力必须标为未验证。
++
++## 后果
++
++不再投入时间扩建通用深度学习框架；早期代码只能作为本地背景材料，不复制到新历史。
++项目会更早接触 ML 理论，并能将分布式存储经验转化为 S3 checkpoint 主线。
+diff --git a/docs/audit/pre-reboot-2026-08-27.md b/docs/audit/pre-reboot-2026-08-27.md
+new file mode 100644
+index 0000000..211f04e
+--- /dev/null
++++ b/docs/audit/pre-reboot-2026-08-27.md
+@@ -0,0 +1,38 @@
++# Airi-DL 永久重启前审计
++
++## 可复核事实
++
++- 审计时间：2026-08-27（Asia/Shanghai）。
++- 旧本地 `main` 与远端 `origin/main`：
++  `298ea9a3dcf2f28af9235366664d8784a8fa92f2`。
++- 旧历史只有 2 个 commit；无 day tag、无 CI。
++- 旧历史跟踪 3,974 个文件，其中 `GUIDE/` 3,339 个。
++- 根 OriginDL 与 `GUIDE/day1-day28` 是两套分叉实现，根目录不是 day28。
++- 根工程 CPU-only 配置后仍调用 CUDA 符号，约 25% 编译进度处失败。
++- `GUIDE/day28` 在 macOS CPU-only 干净构建中 CTest 37/37；GPU 用例关闭 CUDA 后
++  skip/stub，不能作为 RTX 5090 证据。
++- 约 22 个 GUIDE 快照因缺失依赖、普通文本伪软链接或不完整 vendor 无法独立配置。
++- 所有旧 `build.sh` 均无可执行位；每日增量常达 800-2,700 行，day24 约引入
++  54,565 行第三方源码。
++- 旧 `MEMORY/session/plan.md` 同时出现 40、45、46 天版本，并排除了当前要求的
++  TP/PP/ZeRO。
++
++## 删除决定
++
++用户明确选择永久重写历史，不保留 legacy 目录、归档 tag 或旧源码副本。新历史只保留
++本审计结论和删除理由。远端不可达对象可能被托管平台暂存；这不等价于公开可达的归档。
++
++## 敏感资料边界
++
++重启前唯一未跟踪顶层目录是 `BACKGROUND/`，约 219 MB、4,929 个文件，并包含三个
++独立嵌套 Git 仓库。其中 `BACKGROUND/boss` 指向企业内部远端，可能包含实习单位代码。
++新 `.gitignore` 使用根路径规则 `/BACKGROUND/`；禁止 `git clean -ffd`、
++`git clean -ffdx`、`git push --all` 和 `git push --mirror`。任何背景代码均不得复制
++到公开项目。
++
++## 新边界
++
++- 品牌/API：`Airi-DL`、Python 包 `airidl`、C++ namespace `airidl`。
++- 许可证：Apache-2.0。
++- 正式平台：Ubuntu 24.04 x86_64；macOS 只作 CPU bootstrap。
++- 旧源码未迁移；若未来借鉴某个思路，必须作为新代码重新实现、测试并在 DEVLOG 解释。
+diff --git a/docs/devlogs/day001.md b/docs/devlogs/day001.md
+new file mode 100644
+index 0000000..71af5ba
+--- /dev/null
++++ b/docs/devlogs/day001.md
+@@ -0,0 +1,176 @@
++# day001：重启、双语言骨架与环境自检
++
++## 1. 目标、非目标、前置知识和预计时长
++
++目标是从空 Git tree 建立第一个可独立 configure/build/test 的 Airi-DL 快照，并让
++`airidl doctor` 诚实描述“当前开发宿主能做什么”。预计 4-5 小时。
++
++前置知识：基本 shell、Git commit、C++ 编译/链接和 Python module。不了解 CMake preset、
++`src` layout 或 uv 没关系，本日志会在第一次出现时解释。
++
++非目标：Tensor、Autograd、PyTorch、CUDA 编译、GPU 测试、模型训练、分布式通信。
++day001 在 CPU 环境通过不代表 RTX 5090 已验证。
++
++## 2. 理论与数据流
++
++C++ 构建链是：
++
++```text
++version.cpp -> object -> libairidl_core.a -> version_test.cpp -> executable -> CTest
++```
++
++`target_include_directories`、warning 和 sanitizer 全挂在具体 target 上，避免旧工程的
++global flags 污染所有目标。源码显式列举，不使用 `GLOB`。
++
++Python 路径是：
++
++```text
++pyproject.toml -> uv.lock -> editable package -> airidl.cli:main -> doctor report
++```
++
++`src/airidl` 避免在仓库根意外 import 未安装源码。doctor 只探测，不安装、不编译、
++不创建缓存；profile 将 macOS CPU 开发、portable CI 与 Ubuntu CUDA 正式环境分开。
++
++## 3. 按依赖顺序逐字符修改
++
++从空目录手写时，以同目录 `CHANGES.patch` 为逐字符真源：10 个实现/测试文件按 patch
++逐行录入，去掉最左侧 `+`，不要复制 diff header。Apache LICENSE 从官方文本核对，
++`uv.lock` 必须由固定 uv 命令生成，snapshot metadata 由封存步骤生成，禁止手工伪造
++checksum。每完成下面一步就运行对应检查，不要抄完整个 patch 后才排错。
++
++### 步骤 1：仓库边界和版本
++
++1. 写 `.gitignore`，第一条有效规则必须是 `/BACKGROUND/`。
++2. 写 `.gitattributes`、`.editorconfig`、`.python-version` 和 Apache-2.0 `LICENSE`。
++3. 写 `env/versions.toml`。区分系统 CUDA 13.0.3、PyTorch wheel 构建 CUDA 13.0.2
++   和 wheel variant `cu130`；三者不是同一个版本字段。
++
++检查：
++
++```bash
++git status --short
++git check-ignore -v BACKGROUND
++git ls-files --stage | grep '^160000 ' && exit 1 || true
++```
++
++### 步骤 2：C++20 最小库
++
++1. 先写 `cpp/include/airidl/version.hpp`，只暴露常量和 `Version()`。
++2. 再写 `cpp/runtime/version.cpp`，实现版本字符串。
++3. 写 `cpp/tests/version_test.cpp`；失败返回 1，成功返回 0。
++4. 写 `CMakeLists.txt` 和 `CMakePresets.json`，最后写 Makefile 的 C++ targets。
++
++检查：
++
++```bash
++cmake --preset dev
++cmake --build --preset dev
++ctest --preset dev
++```
++
++### 步骤 3：Python 包和 doctor
++
++1. 写 `pyproject.toml`，runtime dependency 保持为空。
++2. 写 `src/airidl/__init__.py` 和 `__main__.py`。
++3. 写 `doctor.py`：先定义状态和 Check，再写无副作用 probe，最后组合 report。
++4. 写 `cli.py`；`python -m airidl` 与 console script 必须共用同一个 `main()`。
++5. 按 `test_version.py -> test_doctor.py -> test_cli.py` 顺序写测试。
++
++检查：
++
++```bash
++uv lock
++uv sync --frozen
++uv run ruff check src tests
++uv run mypy src tests
++uv run pytest
++uv run airidl doctor --json
++```
++
++### 步骤 4：文档和独立快照
++
++1. 写根 README、ADR、重启审计、路线和本日志。
++2. 将根目录的一方工程复制为 `HISTORY/day001`，排除 `.git`、`BACKGROUND`、`build`、
++   `.venv` 和整个根 `HISTORY`。
++3. 生成 `SNAPSHOT.json`；`CHANGES.patch` 是空 tree 到一方工程的 patch。
++4. `MANIFEST.sha256` 覆盖快照内除自身外的所有文件。
++5. 写 `HISTORY/LATEST=day001`；冻结后只能通过 ERRATA 说明错误。
++
++检查：
++
++```bash
++snapshot_dir="$(mktemp -d)/airidl-day001"
++cp -R HISTORY/day001 "$snapshot_dir"
++cd "$snapshot_dir"
++# 若当前目录本来就是独立 day001，从这里开始。
++python3.12 -c 'from pathlib import Path; m={line.split(maxsplit=1)[1].removeprefix("./") for line in Path("MANIFEST.sha256").read_text().splitlines()}; a={str(p).removeprefix("./") for p in Path(".").rglob("*") if p.is_file()}; assert a == m | {"MANIFEST.sha256"}, (a-m, m-a)'
++if command -v sha256sum >/dev/null; then sha256sum -c MANIFEST.sha256; else shasum -a 256 -c MANIFEST.sha256; fi
++uv sync --frozen
++make check
++```
++
++## 4. Build/test 节奏
++
++| 完成点 | 必跑命令 | 失败时先看 |
++|---|---|---|
++| C++ header/source/test | `cmake --preset dev && cmake --build --preset dev` | target 源文件和 include scope |
++| C++ test | `ctest --preset dev` | executable 返回码 |
++| Python CLI | `uv run pytest tests/test_cli.py` | stdout 是否只有一个 JSON |
++| Python 全量 | `ruff`、`mypy`、`pytest` | 格式、类型、行为分别处理 |
++| 封存前 | `make check` + 仓库外快照重放 | 隐式根路径或未锁依赖 |
++
++## 5. 全部变更覆盖表
++
++| Patch 区域 | 文件 | 手写目的 |
++|---|---|---|
++| 治理 | `.gitignore` `.gitattributes` `.editorconfig` `.python-version` `LICENSE` | 边界、文本和许可证 |
++| 构建 | `CMakeLists.txt` `CMakePresets.json` `Makefile` | C++20、CTest、sanitizer、任务入口 |
++| 依赖 | `pyproject.toml` `uv.lock` `env/versions.toml` | Python/工具链可复现 |
++| C++ | `cpp/include/airidl/version.hpp` `cpp/runtime/version.cpp` `cpp/tests/version_test.cpp` | 最小链接契约 |
++| Python | `src/airidl/{__init__,__main__,cli,doctor}.py` | 包、CLI、环境报告 |
++| 测试 | `tests/test_{version,doctor,cli}.py` | 版本、schema、退出码 |
++| 决策 | `README.md` `docs/adr/...` `docs/audit/...` `docs/roadmap/...` | 范围和路线 |
++| 快照 | `HISTORY/LATEST` `README.md` `DEVLOG.md` `SNAPSHOT.json` `CHANGES.patch` `MANIFEST.sha256` | 独立封存 |
++
++`CHANGES.patch` 不包含三个由封存过程生成的 metadata 文件；它们由 day001 手工生成，
++day002 再实现通用 `seal/verify`。除该明确例外，表中每个一方文件都必须在 patch 中出现。
++day001 因 empty-tree bootstrap 具有唯一规模例外；从 day002 起严格执行 350 行/10 文件。
++
++## 6. 实际命令、输出和证据
++
++当前执行宿主是 macOS arm64，因此只记录 CPU bootstrap；
++Ubuntu 24.04、RTX 5090、CUDA 13.0.3 和 PyTorch 2.13.0/cu130 均为“已锁定、未实机验证”。
++
++```text
++root: ruff/format PASS; strict mypy PASS; pytest 10/10 PASS
++root: CTest dev 1/1 PASS; ASan+UBSan CTest 1/1 PASS
++wheel: build/install PASS; packaged versions.toml policy resource PASS
++doctor macos-dev: overall=pass, cpp=true, cuda=false (3 expected skips)
++doctor unit matrix: Ubuntu CUDA driver 579=fail, 580.126.20=pass
++snapshot: 26 canonical files; patch replay/parity PASS
++snapshot: closed file set 30/30; manifest payload checksum 29/29 PASS
++snapshot outside repository: ruff/mypy/pytest/CMake/CTest/sanitizers PASS
++fresh empty dependency cache: one files.pythonhosted timeout after 3 retries
++shared cache retry: PASS; cache is acceleration only and no root path was read
++```
++
++## 7. 故障排查、自测题、局限和下一日接口
++
++常见故障：
++
++- `uv` 拒绝运行：确认版本精确为 0.12.6。
++- Python 3.14 被选中：运行 `uv python pin 3.12`，不要放宽项目到 3.14。
++- CMake 找不到 Ninja：先 `uv sync --frozen`，再通过 `uv run cmake ...` 或 Makefile。
++- macOS doctor 报 CUDA skip：这是预期；若选择 `ubuntu-cuda` profile 才必须失败。
++- 快照只在根目录能构建：搜索绝对路径、`../` 回读和 symlink。
++
++自测题：
++
++1. 为什么 static library 成功编译仍不能证明 executable 能链接？
++2. 为什么 `sm_120` 不应写入 Python dependency？
++3. 为什么 macOS 缺 CUDA 是 skip，而 Ubuntu CUDA profile 缺 CUDA 是 fail？
++4. 为什么 MANIFEST 不能包含自身的 SHA-256？
++5. `--force-with-lease=<old-sha>` 比裸 `--force` 多保护了什么？
++
++局限：day001 的 doctor 只建立并单测能力契约，不运行 GPU workload；正式 Ubuntu/5090
++结果仍是 `not-run`。day002 只扩展 snapshot seal/verify，不得提前引入 ML 代码。
+diff --git a/docs/roadmap/80-plus-12-days.md b/docs/roadmap/80-plus-12-days.md
+new file mode 100644
+index 0000000..a7b2aa3
+--- /dev/null
++++ b/docs/roadmap/80-plus-12-days.md
+@@ -0,0 +1,219 @@
++# Airi-DL 80+12 天路线
++
++## 使用规则
++
++一个 day 是 4-5 小时量级的学习单元，不强制等于自然日。目标新增 100-250 行一方代码，
++硬上限 350 行和 10 个文件；超过即拆分。验收未通过不得封存或开始下一天。
++
++day001 是从 empty tree 建立仓库的唯一 bootstrap 例外：10 个实现/测试文件仍需逐字手写；
++标准 Apache LICENSE、工具生成的 `uv.lock`/snapshot metadata 和治理文档不计入代码
++行数与文件数。day002 起不再允许该例外。
++
++每个机制必须标注证据等级：
++
++- L1：核心机制自行实现，并与参考实现对账。
++- L2：调用官方实现，完成配置、观测、故障或性能实验。
++- L3：确定性模拟器或缩小版教学实现。
++- L4：阅读/架构映射/受硬件限制的实验设计，不宣称实现或验证。
++
++固定模型是 8 层、hidden 512、8 attention heads/4 KV heads、FFN 1536、context 512、
++vocab 8192 的约 30M Llama-like TinyStories Decoder。`airi-debug` 用于快速正确性测试；
++300M/1B synthetic Decoder 只用于显存与扩展性实验。
++
++## Phase 0：治理与可复现性
++
++| Day | 交付与验收 |
++|---|---|
++| 001 | orphan 重启、双语言骨架、版本锁、`airidl doctor`、独立快照。 |
++| 002 | `seal/verify`、manifest、patch、共享缓存与仓库外回放。 |
++| 003 | strict config、ModelBundle/checkpoint/benchmark schema、CLI、JSON log。 |
++| 004 G0 | CI、fresh clone、root/latest、patch/manifest 与手写流程门禁。 |
++
++## Phase 1：ML 与同一 Decoder
++
++| Day | 交付与验收 |
++|---|---|
++| 005 | Tensor shape/broadcast/matmul、链式法则和线性回归对账。 |
++| 006 | 稳定 softmax/cross-entropy、SGD/AdamW、数值梯度。 |
++| 007 | 自回归目标、teacher forcing、perplexity。 |
++| 008 | 8192 byte-level BPE 与中英文/emoji round-trip fixture。 |
++| 009 | TinyStories 许可/哈希、确定性 split、streaming shards。 |
++| 010 | packing/next-token label、无泄漏、重复运行 hash 一致。 |
++| 011 | causal self-attention 的逐步 PyTorch 实现。 |
++| 012 | MHA/GQA 与 SDPA forward/backward 对账。 |
++| 013 | RMSNorm、RoPE、SwiGLU 数学和梯度。 |
++| 014 | Pre-Norm Decoder block、residual、dropout。 |
++| 015 | 完整 debug/30M 模型与 HF Llama 权重命名。 |
++| 016 | BF16 trainer、梯度累积、activation checkpoint、clip、LR schedule。 |
++| 017 G1 | exact resume、固定 batch loss `<0.1`、10M-token pilot、固定 prompts。 |
++
++## Phase 2：CUDA 性能工程
++
++| Day | 交付与验收 |
++|---|---|
++| 018 | Torch-free kernel ABI、Torch adapter、custom-op 注册。 |
++| 019 | HBM、coalescing、vectorized load/store、有效带宽。 |
++| 020 | warp shuffle、shared-memory reduction、非 2 次幂边界。 |
++| 021 | 教学 GEMM、cuBLASLt/Tensor Core 与 roofline；生产不自造 GEMM。 |
++| 022 | 奇数 shape、BF16/FP32、compute-sanitizer、Nsight baseline。 |
++| 023 | fused RMSNorm forward/backward。 |
++| 024 | RoPE kernel 与增量 position offset。 |
++| 025 | fused SwiGLU forward/backward。 |
++| 026 | online softmax 与 Triton 对照实现。 |
++| 027 | 固定 head dim、causal、forward-only 教学 FlashAttention。 |
++| 028 | stream/event、pinned H2D、双缓冲与计算传输重叠。 |
++| 029 | 固定 shape CUDA Graph capture/replay。 |
++| 030 G2 | custom-op fallback 训练集成、Nsight 报告、100M-token 回归。 |
++
++## Phase 3：通信与 DDP
++
++| Day | 交付与验收 |
++|---|---|
++| 031 | rank/world/process group/rendezvous 与 2-4 rank Gloo harness。 |
++| 032 | 基于 P2P 的 Broadcast 与 Reduce。 |
++| 033 | Ring AllReduce = ReduceScatter + AllGather。 |
++| 034 | Tree AllReduce、小消息延迟、NUMA/PCIe/topology 成本模型。 |
++| 035 | AllGather、ReduceScatter、All-to-All 契约。 |
++| 036 | 字节模型、超时/断连、collective 算法对比门禁。 |
++| 037 | C++ NCCL backend、异步 Work、stream、abort；不重写 NCCL。 |
++| 038 | 逐参数同步的教学 DDP。 |
++| 039 | autograd hook、稳定 bucket 顺序、bucket 大小实验。 |
++| 040 | 独立通信 stream、event 依赖、计算通信重叠。 |
++| 041 | `no_sync`、梯度累积、DP 与 DDP 对照。 |
++| 042 | 云 Gate A：2 GPU 必达、4 GPU 目标，nccl-tests 与 DDP scaling。 |
++| 043 G3 | global batch 等价、scaling efficiency、通信占比和原始证据。 |
++
++## Phase 4：参数分片、FSDP2 与 TP
++
++| Day | 交付与验收 |
++|---|---|
++| 044 | 显存账本与 ZeRO-1 optimizer-state sharding。 |
++| 045 | ZeRO-2 gradient ReduceScatter。 |
++| 046 | 仅 debug block 的教学 ZeRO-3 gather/reshard。 |
++| 047 | 官方 FSDP2、DTensor、DeviceMesh、sharded state dict。 |
++| 048 | 300M/1B synthetic 的峰值显存、最大 batch、resume 门禁。 |
++| 049 | Column Parallel Linear。 |
++| 050 | Row Parallel Linear。 |
++| 051 | attention-head TP 与完整 Decoder block。 |
++| 052 | 真实 TP=2 云验证 logits/loss/gradient 与显存。 |
++| 053 G4 | DeepSpeed ZeRO-2 vs FSDP2；Megatron/TorchTitan 源码映射。 |
++
++## Phase 5：数据、S3 Checkpoint、容错与观测
++
++| Day | 交付与验收 |
++|---|---|
++| 054 | rank/epoch 可重现的 dataset sharding 与 sampler cursor。 |
++| 055 | worker prefetch、pinned staging、三磁盘 NVMe locality。 |
++| 056 | MinIO/S3 dataset shards、checksum、本地 cache。 |
++| 057 | checkpoint manifest 与 POSIX/S3 提交协议。 |
++| 058 | DCP `async_save`、CPU/pinned staging、训练阻塞比例。 |
++| 059 | 不同 world size 的 DCP reshard 恢复。 |
++| 060 | heartbeat、deadline、timeout、retry、communicator abort。 |
++| 061 | TorchElastic kill/restart、rank 不稳定、sampler 重建。 |
++| 062 | 单个 debug step 的 straggler 注入、Prometheus/OTel trace 与 critical path。 |
++| 063 G5 | 云 Gate B：多节点 kill/中断/损坏 shard/S3 恢复；RDMA 可选。 |
++
++## Phase 6：C++ LLM Serving
++
++| Day | 交付与验收 |
++|---|---|
++| 064 | ModelBundle export、SafeTensors、tokenizer golden、logits parity。 |
++| 065 | `DeviceBuffer/TensorView/CudaArena` 与 mmap loader。 |
++| 066 | C++ byte-level BPE 与 Python token-id 对账。 |
++| 067 | C++ Llama forward、固定输入 logits 对账。 |
++| 068 | greedy、temperature、top-p sampling 与确定性测试。 |
++| 069 | 连续 KV cache、prefill/decode 分离。 |
++| 070 | 静态/动态 batching baseline 与统一 workload generator。 |
++| 071 | 请求状态机与 iteration-level continuous batching。 |
++| 072 | KV block allocator/table、cancel/OOM/reclaim、Paged KV。 |
++| 073 | decode-only PagedAttention 与连续 KV reference 对账。 |
++| 074 G6 | 新增 chunked prefill；复用既有 fairness/Graph，执行 30 分钟压力门禁。 |
++
++## Phase 7：API、展示与调度
++
++| Day | 交付与验收 |
++|---|---|
++| 075 | `POST /v1/responses`、SSE、backpressure、cancel、metrics、SDK contract。 |
++| 076 | PyTorch eager/compile、自研 runtime、vLLM 同 workload 比较。 |
++| 077 | Web：故事、queue/KV map、延迟分位数、训练/故障状态。 |
++| 078 | 确定性 GPU 集群模拟器：resource/topology/gang/bin packing。 |
++| 079 | DRF/weighted fairness、preemption、fragmentation、checkpoint-aware victim。 |
++| 080 G7 | 30M 模型累计训练 600M tokens、恢复、export、serving、压测和求职证据。 |
++
++## day081-day092 选修扩展
++
++| Day | 交付与验收 |
++|---|---|
++| 081 | Pipeline Parallel GPipe。 |
++| 082 | 1F1B schedule、bubble、activation checkpoint。 |
++| 083 | MoE top-k router、capacity、load-balancing loss。 |
++| 084 | Expert Parallel All-to-All。 |
++| 085 | Prefix Cache hash/refcount/eviction。 |
++| 086 | greedy speculative decoding。 |
++| 087 | 随机采样下分布正确的 speculative decoding。 |
++| 088 | per-channel INT8 weight-only quantization。 |
++| 089 | 单一 GPTQ W4A16 adapter；TensorRT-LLM 只作兼容测量/架构映射。 |
++| 090 | Prefill/Decode disaggregation 与 KV transfer 模拟。 |
++| 091 | 单个 kind 集群的 Volcano Queue/PodGroup/gang；Slurm/Ray 仅作 L4 对照。 |
++| 092 | 两节点 IB/RoCE/RDMA/GPUDirect nccl-tests；无硬件则保持 L4。 |
++
++## 阶段门禁与预算
++
++- G0：fresh clone 和快照独立构建，root/latest/patch/manifest 一致。
++- G1：debug fixed-batch loss `<0.1`，resume 后 batch/RNG/参数轨迹一致。
++- G2：边界 shape、BF16/FP32、gradcheck、sanitizer、profiler 全通过。
++- G3：真实 `world_size >= 2`，固定 global batch 的更新对齐并报告 scaling。
++- G4：300M/1B 峰值显存、TP 对齐、sharded state 保存恢复。
++- G5：覆盖 kill -9、上传中断、对象缺失/损坏、straggler，只恢复最后完整提交。
++- G6：逐 token 对齐、Paged KV 随机状态机、并发 1/8/32 各压测 30 分钟。
++- G7：`make demo` 从 day080 干净快照启动全闭环；简历描述逐条链接原始证据。
++
++Gate A 上限 ¥300，Gate B 上限 ¥600，保留 ¥100 应急，总计不超过 ¥1000。
++云资源只在本地脚本 dry-run 后启动，并设置预算告警和自动关机。
++RDMA/IB/RoCE/GPUDirect 不是 day080 完成条件，不得伪造未运行的结果。
++
++## 证据等级账本
++
++等级描述的是当日主要机制；组合等级表示“自研边界 + 官方集成/对照”，不能把 L2 写成
++“自行实现了框架”。Gate 日的等级指其验证对象。
++
++| Days | 等级 | 边界 |
++|---|---|---|
++| 001-008 | L1 | 自研治理工具、数学练习和 tokenizer；不重造通用 Autograd。 |
++| 009-017 | L1+L2 | 自研数据/模型/trainer，PyTorch 算子作为 reference。 |
++| 018-020 | L1 | Torch-free ABI、访存和 reduction。 |
++| 021-022 | L1+L2 | 教学 GEMM；cuBLASLt、sanitizer、Nsight 是官方工具。 |
++| 023-025 | L1 | 自研融合算子与 backward。 |
++| 026 | L1+L2 | 自研 online softmax，Triton 为对照。 |
++| 027-029 | L1 | 缩小版 FlashAttention、overlap 和 Graph harness。 |
++| 030 | L1+L2 | 自研 op 集成 PyTorch trainer 并用 Nsight 验证。 |
++| 031-036 | L1+L3 | 教学 collective 自研；topology/字节成本为确定性模型。 |
++| 037 | L2 | 自研 wrapper/backend，底层 collective 明确由 NCCL 实现。 |
++| 038-041 | L1+L2 | 教学 DDP 与官方 DDP 对照。 |
++| 042-043 | L2 | 真实 NCCL/DDP 云实验与证据。 |
++| 044-046 | L1 | 缩小版 ZeRO-1/2/3 教学实现。 |
++| 047-048 | L2 | 官方 FSDP2/DTensor 集成和显存实验。 |
++| 049-051 | L1 | Column/Row/Attention TP。 |
++| 052 | L2 | 真实 TP 云验收。 |
++| 053 | L2+L4 | DeepSpeed 实验；Megatron/TorchTitan 只作源码映射。 |
++| 054-057 | L1+L2 | 自研 shard/cache/提交协议，MinIO/S3 是集成对象。 |
++| 058-059 | L2 | 官方 DCP async/reshard。 |
++| 060 | L1+L2 | 自研 failure policy，communicator 由官方 backend 提供。 |
++| 061 | L2 | TorchElastic 集成。 |
++| 062 | L1+L2 | 自研注入/critical-path 汇总，Prometheus/OTel 为集成。 |
++| 063 | L2+L4 | TCP 多节点必测；RDMA 只在硬件存在时升级为 L2。 |
++| 064-073 | L1 | ModelBundle、C++ runtime、KV、continuous batching、PagedAttention。 |
++| 074 | L1+L2 | 自研 chunking/scheduler，CUDA Graph 为官方机制集成。 |
++| 075 | L1+L2 | 自研网关/取消链，官方 Responses contract 作对照。 |
++| 076 | L2+L4 | vLLM 可运行基线；SGLang/TensorRT-LLM 可为架构矩阵。 |
++| 077-080 | L1+L2 | 自研 Web/模拟器/闭环，依赖官方基础设施集成。 |
++| 081-082 | L1+L2 | 自研 schedule，并与官方 pipeline API 对照。 |
++| 083-088 | L1 | 缩小版 MoE/EP/cache/speculative/INT8。 |
++| 089 | L2+L4 | 单一量化 adapter；未运行的 vendor 路径保持 L4。 |
++| 090 | L3 | 单机逻辑 worker 与 KV transfer 模拟。 |
++| 091 | L2+L4 | Volcano 实验；Slurm/Ray 只作对照。 |
++| 092 | L2 或 L4 | 有合格硬件才是 L2，否则明确未验证。 |
++
++额外 L4 知识账本覆盖 NVLink/NVSwitch、SM、SGLang、Slurm、Ray、Parallel File System
++和 GPU failure；它们服务于 topology、生态或故障矩阵，不占用核心实现日，也不进入
++“已实现”简历表述。
+diff --git a/env/versions.toml b/env/versions.toml
+new file mode 100644
+index 0000000..4ba1b63
+--- /dev/null
++++ b/env/versions.toml
+@@ -0,0 +1,43 @@
++schema_version = 1
++frozen_at = "2026-08-27"
++
++[project]
++name = "Airi-DL"
++version = "0.1.0.dev1"
++snapshot = "day001"
++license = "Apache-2.0"
++
++[formal_target]
++os = "Ubuntu 24.04 LTS"
++architecture = "x86_64"
++python = "3.12"
++cpp_standard = 20
++gcc = "13.3.0"
++cmake = "3.28.3"
++cmake_min = "3.28"
++ninja = "1.11.1"
++ninja_min = "1.11"
++cuda_toolkit = "13.0.3"
++cuda_series = "13.0"
++cuda_driver_min = "580.126.20"
++cuda_architectures = ["sm_120", "compute_120"]
++pytorch = "2.13.0"
++pytorch_wheel = "cu130"
++pytorch_build_cuda = "13.0.2"
++pytorch_bundled_cudnn = "9.20.0.48"
++pytorch_bundled_nccl = "2.29.7"
++
++[experimental]
++pytorch_wheel = "cu132"
++note = "CUDA 13.2 is experimental in PyTorch 2.13 and is not the baseline"
++
++[bootstrap_tools]
++uv = "0.12.6"
++hatchling = "1.32.0"
++ruff = "0.16.4"
++mypy = "2.3.1"
++pytest = "9.1.1"
++
++[development_host]
++purpose = "CPU bootstrap only; it is not CUDA or performance evidence"
++supported_systems = ["Linux", "Darwin"]
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000..aa7677b
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,50 @@
++[build-system]
++requires = ["hatchling==1.32.0"]
++build-backend = "hatchling.build"
++
++[project]
++name = "airidl"
++version = "0.1.0.dev1"
++description = "A hand-reproducible ML systems learning laboratory"
++readme = "README.md"
++requires-python = ">=3.12,<3.13"
++license = "Apache-2.0"
++authors = [{name = "Airi-DL contributors"}]
++dependencies = []
++
++[project.scripts]
++airidl = "airidl.cli:main"
++
++[dependency-groups]
++dev = [
++  "mypy==2.3.1",
++  "ninja==1.13.0",
++  "pytest==9.1.1",
++  "ruff==0.16.4",
++]
++
++[tool.uv]
++required-version = "==0.12.6"
++default-groups = ["dev"]
++
++[tool.hatch.build.targets.wheel]
++packages = ["src/airidl"]
++
++[tool.hatch.build.targets.wheel.force-include]
++"env/versions.toml" = "airidl/versions.toml"
++
++[tool.pytest.ini_options]
++addopts = "-q"
++testpaths = ["tests"]
++
++[tool.ruff]
++line-length = 100
++target-version = "py312"
++
++[tool.ruff.lint]
++select = ["E", "F", "I", "UP", "B", "SIM"]
++
++[tool.mypy]
++python_version = "3.12"
++strict = true
++files = ["src", "tests"]
+diff --git a/src/airidl/__init__.py b/src/airidl/__init__.py
+new file mode 100644
+index 0000000..ecafa7e
+--- /dev/null
++++ b/src/airidl/__init__.py
+@@ -0,0 +1,5 @@
++"""Airi-DL public package metadata."""
++
++__all__ = ["__version__"]
++
++__version__ = "0.1.0.dev1"
+diff --git a/src/airidl/__main__.py b/src/airidl/__main__.py
+new file mode 100644
+index 0000000..139e7bc
+--- /dev/null
++++ b/src/airidl/__main__.py
+@@ -0,0 +1,3 @@
++from airidl.cli import main
++
++raise SystemExit(main())
+diff --git a/src/airidl/cli.py b/src/airidl/cli.py
+new file mode 100644
+index 0000000..48f06d5
+--- /dev/null
++++ b/src/airidl/cli.py
+@@ -0,0 +1,41 @@
++"""Command-line entry point for Airi-DL."""
++
++from __future__ import annotations
++
++import argparse
++import json
++from collections.abc import Sequence
++from typing import cast
++
++from airidl import __version__
++from airidl.doctor import Profile, collect_report
++
++
++def _parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(prog="airidl")
++    parser.add_argument("--version", action="version", version=__version__)
++    commands = parser.add_subparsers(dest="command", required=True)
++    doctor = commands.add_parser("doctor", help="inspect host capabilities without changing them")
++    doctor.add_argument("--json", action="store_true", dest="as_json")
++    doctor.add_argument(
++        "--profile",
++        choices=("auto", "macos-dev", "portable-ci", "ubuntu-cuda"),
++        default="auto",
++    )
++    return parser
++
++
++def main(argv: Sequence[str] | None = None) -> int:
++    args = _parser().parse_args(argv)
++    profile: Profile = args.profile
++    report = collect_report(profile)
++    if args.as_json:
++        print(json.dumps(report, indent=2, sort_keys=True))
++    else:
++        print(f"Airi-DL {__version__} | {report['profile']} | {report['overall']}")
++        checks = cast(list[dict[str, object]], report["checks"])
++        for item in checks:
++            status = str(item["status"])
++            actual = item["actual"] or item["expected"]
++            print(f"[{status:>4}] {item['name']}: {actual}")
++    return 0 if report["overall"] == "pass" else 3
+diff --git a/src/airidl/doctor.py b/src/airidl/doctor.py
+new file mode 100644
+index 0000000..4a640a9
+--- /dev/null
++++ b/src/airidl/doctor.py
+@@ -0,0 +1,220 @@
++"""Read-only host capability inspection for the current learning snapshot."""
++
++from __future__ import annotations
++
++import platform
++import re
++import shutil
++import subprocess
++import sys
++import tomllib
++from dataclasses import asdict, dataclass
++from importlib.resources import files
++from pathlib import Path
++from typing import Literal, cast
++
++from airidl import __version__
++
++Status = Literal["pass", "warn", "fail", "skip"]
++Profile = Literal["auto", "macos-dev", "portable-ci", "ubuntu-cuda"]
++
++
++@dataclass(frozen=True)
++class Check:
++    name: str
++    required: bool
++    status: Status
++    expected: str
++    actual: str | None
++
++
++def resolve_profile(
++    requested: Profile,
++    system: str | None = None,
++    machine: str | None = None,
++    os_release: dict[str, str] | None = None,
++    kernel_release: str | None = None,
++) -> str:
++    if requested != "auto":
++        return requested
++    host_system = system or platform.system()
++    if host_system == "Darwin":
++        return "macos-dev"
++    if host_system != "Linux":
++        return "portable-ci"
++    release = kernel_release or platform.release()
++    if "microsoft" in release.lower():
++        return "portable-ci"
++    distro = os_release
++    if distro is None:
++        try:
++            distro = platform.freedesktop_os_release()
++        except OSError:
++            distro = {}
++    host_machine = machine or platform.machine()
++    if (
++        distro.get("ID") == "ubuntu"
++        and distro.get("VERSION_ID", "").startswith("24.04")
++        and host_machine in {"x86_64", "AMD64"}
++    ):
++        return "ubuntu-cuda"
++    return "portable-ci"
++
++
++def _run(command: list[str]) -> str | None:
++    try:
++        result = subprocess.run(command, capture_output=True, check=False, text=True, timeout=2)
++    except (OSError, subprocess.TimeoutExpired):
++        return None
++    if result.returncode != 0:
++        return None
++    output = (result.stdout or result.stderr).strip()
++    return output if output else None
++
++
++def _version_at_least(actual: str, minimum: tuple[int, ...]) -> bool:
++    match = re.search(r"\d+(?:\.\d+)+", actual)
++    if match is None:
++        return False
++    found = tuple(int(part) for part in match.group().split("."))
++    padded = found + (0,) * max(0, len(minimum) - len(found))
++    return padded[: len(minimum)] >= minimum
++
++
++def _tool(
++    name: str,
++    expected: str,
++    required: bool,
++    minimum: tuple[int, ...] | None = None,
++    executable: str | None = None,
++) -> Check:
++    path = shutil.which(executable or name)
++    if path is None:
++        return Check(name, required, "fail" if required else "skip", expected, None)
++    output = _run([path, "--version"])
++    actual = output.splitlines()[0] if output else path.rsplit("/", 1)[-1]
++    ok = minimum is None or _version_at_least(actual, minimum)
++    return Check(name, required, "pass" if ok else "fail", expected, actual)
++
++
++def _platform_check(profile: str, formal: dict[str, object]) -> Check:
++    system, machine = platform.system(), platform.machine()
++    actual = f"{system} {machine}"
++    if profile == "macos-dev":
++        ok, expected = system == "Darwin", "Darwin (CPU development)"
++    elif profile == "ubuntu-cuda":
++        try:
++            os_release = platform.freedesktop_os_release()
++        except OSError:
++            os_release = {}
++        actual = f"{os_release.get('ID', system)} {os_release.get('VERSION_ID', '')} {machine}"
++        ok = (
++            os_release.get("ID") == "ubuntu"
++            and os_release.get("VERSION_ID", "").startswith("24.04")
++            and machine in {"x86_64", "AMD64"}
++        )
++        expected = f"{formal['os']} {formal['architecture']}"
++    else:
++        ok, expected = system in {"Darwin", "Linux"}, "Darwin or Linux"
++    return Check("platform", True, "pass" if ok else "fail", expected, actual)
++
++
++def _python_check(formal: dict[str, object]) -> Check:
++    actual = platform.python_version()
++    expected = str(formal["python"])
++    major, minor = (int(part) for part in expected.split("."))
++    ok = sys.version_info[:2] == (major, minor)
++    return Check("python", True, "pass" if ok else "fail", f"{expected}.x", actual)
++
++
++def _cuda_checks(required: bool, formal: dict[str, object]) -> list[Check]:
++    driver_min = str(formal["cuda_driver_min"])
++    toolkit_series = str(formal["cuda_series"])
++    if not required:
++        return [
++            Check("cuda_driver", False, "skip", f">={driver_min}", None),
++            Check("cuda_toolkit", False, "skip", f"{toolkit_series}.x", None),
++            Check("gpu", False, "skip", "compute capability 12.0", None),
++        ]
++
++    smi, nvcc = shutil.which("nvidia-smi"), shutil.which("nvcc")
++    driver = _run([smi, "--query-gpu=driver_version", "--format=csv,noheader"]) if smi else None
++    toolkit = _run([nvcc, "--version"]) if nvcc else None
++    gpu = _run([smi, "--query-gpu=name,compute_cap", "--format=csv,noheader"]) if smi else None
++    driver_floor = tuple(int(part) for part in driver_min.split("."))
++    driver_ok = driver is not None and all(
++        _version_at_least(line, driver_floor) for line in driver.splitlines()
++    )
++    toolkit_ok = toolkit is not None and f"release {toolkit_series}" in toolkit
++    gpu_ok = gpu is not None and "12.0" in gpu
++    return [
++        Check("cuda_driver", True, "pass" if driver_ok else "fail", f">={driver_min}", driver),
++        Check(
++            "cuda_toolkit", True, "pass" if toolkit_ok else "fail", f"{toolkit_series}.x", toolkit
++        ),
++        Check("gpu", True, "pass" if gpu_ok else "fail", "compute capability 12.0", gpu),
++    ]
++
++
++def _load_policy() -> dict[str, object]:
++    source_path = Path(__file__).resolve().parents[2] / "env" / "versions.toml"
++    if source_path.is_file():
++        with source_path.open("rb") as stream:
++            return cast(dict[str, object], tomllib.load(stream))
++    with files("airidl").joinpath("versions.toml").open("rb") as stream:
++        return cast(dict[str, object], tomllib.load(stream))
++
++
++def collect_report(requested: Profile = "auto") -> dict[str, object]:
++    policy = _load_policy()
++    formal = cast(dict[str, object], policy["formal_target"])
++    project = cast(dict[str, object], policy["project"])
++    profile = resolve_profile(requested)
++    checks = [
++        _platform_check(profile, formal),
++        _python_check(formal),
++        _tool(
++            "cmake",
++            f">={formal['cmake_min']}",
++            True,
++            tuple(int(part) for part in str(formal["cmake_min"]).split(".")),
++        ),
++        _tool(
++            "ninja",
++            f">={formal['ninja_min']}",
++            True,
++            tuple(int(part) for part in str(formal["ninja_min"]).split(".")),
++        ),
++        _tool(
++            "c++",
++            "GCC 13 / C++20" if profile == "ubuntu-cuda" else "C++20 compiler",
++            True,
++            (13, 3) if profile == "ubuntu-cuda" else None,
++            "g++-13" if profile == "ubuntu-cuda" else "c++",
++        ),
++        *_cuda_checks(profile == "ubuntu-cuda", formal),
++    ]
++    overall = "fail" if any(c.required and c.status == "fail" for c in checks) else "pass"
++    return {
++        "schema": "airidl.doctor/v1",
++        "project": {
++            "name": project["name"],
++            "snapshot": project["snapshot"],
++            "version": __version__,
++        },
++        "requested_profile": requested,
++        "profile": profile,
++        "overall": overall,
++        "host": {
++            "system": platform.system(),
++            "release": platform.release(),
++            "machine": platform.machine(),
++        },
++        "capabilities": {
++            "cpp": all(c.status == "pass" for c in checks if c.name in {"cmake", "ninja", "c++"}),
++            "cuda": all(
++                c.status == "pass" for c in checks if c.name.startswith("cuda") or c.name == "gpu"
++            ),
++        },
++        "checks": [asdict(check) for check in checks],
++    }
+diff --git a/tests/test_cli.py b/tests/test_cli.py
+new file mode 100644
+index 0000000..e288cdb
+--- /dev/null
++++ b/tests/test_cli.py
+@@ -0,0 +1,25 @@
++import json
++
++import pytest
++
++import airidl.cli as cli
++
++
++@pytest.mark.parametrize(("overall", "expected_exit"), [("pass", 0), ("fail", 3)])
++def test_doctor_json_exit_code(
++    capsys: pytest.CaptureFixture[str],
++    monkeypatch: pytest.MonkeyPatch,
++    overall: str,
++    expected_exit: int,
++) -> None:
++    report = {
++        "schema": "airidl.doctor/v1",
++        "profile": "portable-ci",
++        "overall": overall,
++        "checks": [],
++    }
++    monkeypatch.setattr(cli, "collect_report", lambda _profile: report)
++    exit_code = cli.main(["doctor", "--json", "--profile", "portable-ci"])
++    captured = capsys.readouterr()
++    assert json.loads(captured.out) == report
++    assert exit_code == expected_exit
+diff --git a/tests/test_doctor.py b/tests/test_doctor.py
+new file mode 100644
+index 0000000..66420c9
+--- /dev/null
++++ b/tests/test_doctor.py
+@@ -0,0 +1,91 @@
++import platform as host_platform
++import shutil as host_shutil
++
++import pytest
++
++import airidl.doctor as doctor
++from airidl.doctor import _version_at_least, collect_report, resolve_profile
++
++
++def test_auto_profile_resolution() -> None:
++    assert resolve_profile("auto", "Darwin") == "macos-dev"
++    assert resolve_profile("auto", "Linux") == "portable-ci"
++    assert (
++        resolve_profile(
++            "auto",
++            "Linux",
++            "x86_64",
++            {"ID": "ubuntu", "VERSION_ID": "24.04"},
++            "6.8.0-generic",
++        )
++        == "ubuntu-cuda"
++    )
++    assert resolve_profile("auto", "Linux", kernel_release="microsoft-wsl2") == "portable-ci"
++    assert resolve_profile("portable-ci", "Darwin") == "portable-ci"
++
++
++def test_version_comparison() -> None:
++    assert _version_at_least("cmake version 4.3.3", (3, 28))
++    assert _version_at_least("580.126.20", (580, 126, 20))
++    assert not _version_at_least("release 12.9", (13, 0))
++
++
++@pytest.mark.parametrize(
++    ("driver", "expected_overall"),
++    [("579.0.0", "fail"), ("580.126.20", "pass")],
++)
++def test_ubuntu_cuda_driver_gate(
++    monkeypatch: pytest.MonkeyPatch, driver: str, expected_overall: str
++) -> None:
++    policy = doctor._load_policy()
++    formal = policy["formal_target"]
++    assert isinstance(formal, dict)
++    monkeypatch.setattr(host_platform, "system", lambda: "Linux")
++    monkeypatch.setattr(host_platform, "machine", lambda: "x86_64")
++    monkeypatch.setattr(
++        host_platform,
++        "freedesktop_os_release",
++        lambda: {"ID": "ubuntu", "VERSION_ID": "24.04"},
++    )
++    monkeypatch.setattr(host_shutil, "which", lambda name: f"/fake/{name}")
++
++    def fake_run(command: list[str]) -> str:
++        joined = " ".join(command)
++        if "driver_version" in joined:
++            return driver
++        if "compute_cap" in joined:
++            return "NVIDIA RTX 5090, 12.0"
++        if "nvcc" in joined:
++            return "Cuda compilation tools, release 13.0, V13.0.88"
++        return "13.3.0" if "g++" in joined else "4.3.3"
++
++    monkeypatch.setattr(doctor, "_run", fake_run)
++    report = collect_report("ubuntu-cuda")
++    assert report["overall"] == expected_overall
++    checks = report["checks"]
++    assert isinstance(checks, list)
++    driver_check = next(check for check in checks if check["name"] == "cuda_driver")
++    assert driver_check["status"] == expected_overall
++
++
++def test_command_with_nonzero_exit_is_missing() -> None:
++    assert doctor._run(["/usr/bin/false"]) is None
++
++
++def test_report_has_stable_contract() -> None:
++    report = collect_report("portable-ci")
++    assert report["schema"] == "airidl.doctor/v1"
++    assert report["profile"] == "portable-ci"
++    checks = report["checks"]
++    assert isinstance(checks, list)
++    assert [check["name"] for check in checks] == [
++        "platform",
++        "python",
++        "cmake",
++        "ninja",
++        "c++",
++        "cuda_driver",
++        "cuda_toolkit",
++        "gpu",
++    ]
++    assert {check["status"] for check in checks} <= {"pass", "warn", "fail", "skip"}
+diff --git a/tests/test_version.py b/tests/test_version.py
+new file mode 100644
+index 0000000..b9bbe6d
+--- /dev/null
++++ b/tests/test_version.py
+@@ -0,0 +1,20 @@
++import re
++import tomllib
++from pathlib import Path
++
++from airidl import __version__
++
++
++def test_python_version_contract() -> None:
++    assert __version__ == "0.1.0.dev1"
++
++
++def test_version_is_consistent_across_build_boundaries() -> None:
++    root = Path(__file__).parents[1]
++    pyproject = tomllib.loads((root / "pyproject.toml").read_text())
++    policy = tomllib.loads((root / "env/versions.toml").read_text())
++    cpp = (root / "cpp/runtime/version.cpp").read_text()
++    cmake = (root / "CMakeLists.txt").read_text()
++    assert pyproject["project"]["version"] == policy["project"]["version"] == __version__
++    assert f'"{__version__}"' in cpp
++    assert re.search(r"project\(AiriDL VERSION 0\.1\.0 ", cmake)
+diff --git a/uv.lock b/uv.lock
+new file mode 100644
+index 0000000..c3dcc70
+--- /dev/null
++++ b/uv.lock
+@@ -0,0 +1,254 @@
++version = 1
++revision = 3
++requires-python = "==3.12.*"
++
++[[package]]
++name = "airidl"
++version = "0.1.0.dev1"
++source = { editable = "." }
++
++[package.dev-dependencies]
++dev = [
++    { name = "mypy" },
++    { name = "ninja" },
++    { name = "pytest" },
++    { name = "ruff" },
++]
++
++[package.metadata]
++
++[package.metadata.requires-dev]
++dev = [
++    { name = "mypy", specifier = "==2.3.1" },
++    { name = "ninja", specifier = "==1.13.0" },
++    { name = "pytest", specifier = "==9.1.1" },
++    { name = "ruff", specifier = "==0.16.4" },
++]
++
++[[package]]
++name = "ast-serialize"
++version = "0.8.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/e1/a9/11851c3e02a3fea2ddc9932d1fdc7d2edaeecc0d2e11bc5f2a7fde2b0934/ast_serialize-0.8.0.tar.gz", hash = "sha256:6c37c43e4004dfb42d321ddedc569dc17ff4259296f3af577c9ea46a809bc010", size = 845638, upload-time = "2026-08-07T11:29:02.152Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/4c/11/911210c3c78923273a9211a2b6cfc4c8aa723b30dab3e1c8d19afb983b40/ast_serialize-0.8.0-cp315-abi3.abi3t-macosx_10_12_x86_64.whl", hash = "sha256:86b8a1e6d90467345356098b040150e82fbc26d24a7a202224b13dc1f6264ca0", size = 1177715, upload-time = "2026-08-07T11:28:04.654Z" },
++    { url = "https://files.pythonhosted.org/packages/77/89/6282881c8587606638db153cbe21e1e0c4d1f3970dee1aa0610a1c62a026/ast_serialize-0.8.0-cp315-abi3.abi3t-macosx_11_0_arm64.whl", hash = "sha256:39e92ff8e8cb45947fe9007174b2950e1fb098e6abd00266a13cd3bcf6675068", size = 1169347, upload-time = "2026-08-07T11:28:06.1Z" },
++    { url = "https://files.pythonhosted.org/packages/97/78/a9f846a03a340ff3728c915f23338ca742742f3292700559cdb3ad999b1e/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c85d8d18db5b2dfcb3b7e38a4d600ca35504c0ed8a6f75cd1c811e4ffe248a15", size = 1225916, upload-time = "2026-08-07T11:28:07.654Z" },
++    { url = "https://files.pythonhosted.org/packages/c0/15/aba6ef8a988a6eceb6f0359589aac509e29ae2dba67fd9bfd5af0c3f13e7/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:9830ff7e764f74d9eefb01170c61a9f0fd2c027dac5fcb72e064decd57d56371", size = 1227135, upload-time = "2026-08-07T11:28:09.504Z" },
++    { url = "https://files.pythonhosted.org/packages/94/29/3f63d696ea7c5b8abadcecc3505be51bd900daaccc522ed8322fa5b05a93/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6479d9722a4cd21b578f5478074c41e6169f04811996ec881655560f703a5bba", size = 1425040, upload-time = "2026-08-07T11:28:11.044Z" },
++    { url = "https://files.pythonhosted.org/packages/e2/5d/0aac338604ff59df5774d4304307898982252f325ff7cafe31d52fedcb65/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a63bed264e818cd83eec11feed0f50aa162542b91132ef58afebc857182763a5", size = 1246278, upload-time = "2026-08-07T11:28:12.519Z" },
++    { url = "https://files.pythonhosted.org/packages/23/ca/9f1ef795bb724719532bd86dbec11e5b66857d3fbe9b6772baec0191a6ed/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9d187197d234aa45d6cfa2b096be5f666e8cc2e7eb3722d0ab8926293cf5720c", size = 1250029, upload-time = "2026-08-07T11:28:13.896Z" },
++    { url = "https://files.pythonhosted.org/packages/dc/25/5e061372d2ed953b9ba3b9c4f73de3b8e9234cda3f6c088db4686801d0e1/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_31_riscv64.whl", hash = "sha256:2d39a56282cfcc0d8eeea37267c754be59c98d48505c23b1dae5c6011f3813dd", size = 1243575, upload-time = "2026-08-07T11:28:15.37Z" },
++    { url = "https://files.pythonhosted.org/packages/a8/c1/ae7da218053120635a4ca802366c69f707203641af95372eeb83f70dfd52/ast_serialize-0.8.0-cp315-abi3.abi3t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:f7cc5f10386994c0f4844f1e6d6a97127e9b478660eb6dec2b257644f0acab64", size = 1294396, upload-time = "2026-08-07T11:28:16.813Z" },
++    { url = "https://files.pythonhosted.org/packages/2e/89/271d1f49c5269fcddcc789ea3f25be401f6723fc1138aeda539f4d05516d/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_aarch64.whl", hash = "sha256:6102f2f985c2e542be85cd857678ec9356fefa792b93cadfadd31139f5696f27", size = 1401987, upload-time = "2026-08-07T11:28:18.333Z" },
++    { url = "https://files.pythonhosted.org/packages/55/be/4e7d77fcf571ac7cb5cf7115a20c36642bd7d29473b45dfaaefeb9618f90/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_armv7l.whl", hash = "sha256:3a8660fe66667b76a6e9dccd1d33e66b229fde3b308db991c041609226c005b6", size = 1502904, upload-time = "2026-08-07T11:28:20.039Z" },
++    { url = "https://files.pythonhosted.org/packages/8b/ae/ed1de2db7e019d4236fbc164ffa5ef9a6022a300a342bbf142d21b7c141e/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_i686.whl", hash = "sha256:e7266307e5fba39836edb79def8608887af48820508bff3c5f2941e1e04d1534", size = 1496967, upload-time = "2026-08-07T11:28:21.734Z" },
++    { url = "https://files.pythonhosted.org/packages/92/89/5fea507fae5c5f18b7dc7f95e5c00956574b8c717b8fd2049c504fab0b18/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_ppc64le.whl", hash = "sha256:4ca7e6fd1ad845d1cc649dc2ecd499db2f8f46af5bf8da7b70dd858774cc038b", size = 1559041, upload-time = "2026-08-07T11:28:23.194Z" },
++    { url = "https://files.pythonhosted.org/packages/42/71/478d69df21b64e064554a68134c94be304270316ca676a94e63c389a636a/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_riscv64.whl", hash = "sha256:2880350b13d3eae69a0d70bc1fb6c9bfaca4dbd0e20ba8cd1aa483080b56ff06", size = 1417367, upload-time = "2026-08-07T11:28:24.601Z" },
++    { url = "https://files.pythonhosted.org/packages/5e/2d/8962dc8d5b3a9dc27b36f9db199afa25264c741505469d9ec10ffbfd2ba7/ast_serialize-0.8.0-cp315-abi3.abi3t-musllinux_1_2_x86_64.whl", hash = "sha256:ab0f9a59f7d63d0d441b56b9a818b273705264352d5115cfee12e940e816d958", size = 1446178, upload-time = "2026-08-07T11:28:26.152Z" },
++    { url = "https://files.pythonhosted.org/packages/4f/22/14d2ad4fd1d1bcd0dc687ca268e0630069f45162496260c0efb70ee0ea72/ast_serialize-0.8.0-cp315-abi3.abi3t-win32.whl", hash = "sha256:0485a25ef519c62e749ee3c1ad8070e591b380d67226349eb5a70b228dc1ac4a", size = 1063811, upload-time = "2026-08-07T11:28:27.864Z" },
++    { url = "https://files.pythonhosted.org/packages/18/1d/84a327c0202a41aa5fdba3ade33904d6d8f3b9e6806fa83568d835395850/ast_serialize-0.8.0-cp315-abi3.abi3t-win_amd64.whl", hash = "sha256:bd84d60bca7079e741be4ac5dbe237751a59d7f6f9f0126b11880d63822cbe16", size = 1105518, upload-time = "2026-08-07T11:28:29.691Z" },
++    { url = "https://files.pythonhosted.org/packages/8c/92/74556dec52fde85a2ad84ed159991b916241043788609c15d8b77e14570b/ast_serialize-0.8.0-cp315-abi3.abi3t-win_arm64.whl", hash = "sha256:057769b5921336eb2d9124f2a731b42ed05ffdac559b840dbdf6f3937cf153dc", size = 1076319, upload-time = "2026-08-07T11:28:31.282Z" },
++    { url = "https://files.pythonhosted.org/packages/d9/e3/6142e920fec6ef7bccabd8c24ed8ed99f8bdc6cb8b065e1df7c6a3b2d667/ast_serialize-0.8.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e1bd223df0f6c96b396975fa604cb33bce53d9b4a0185490be4c4a289f7c9c87", size = 1184007, upload-time = "2026-08-07T11:28:34.654Z" },
++    { url = "https://files.pythonhosted.org/packages/a6/e9/6e8be8df02b35d85e2b8809f7f1cfa290bdf5882b55127a539d049482db0/ast_serialize-0.8.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:ddd3b61f45c132da66c5476b281891e08c1fd87fbdabe8a6973e1622efc85f06", size = 1177588, upload-time = "2026-08-07T11:28:36.318Z" },
++    { url = "https://files.pythonhosted.org/packages/8c/80/7e0fd2e2e2aba257820db4a8657c4c356844d36b914b20a4af294bcfb902/ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1f9caa63fad8241257ae401b5ff0a64026c6adb36b8e86cbe8782d9ea505daf6", size = 1234575, upload-time = "2026-08-07T11:28:37.772Z" },
++    { url = "https://files.pythonhosted.org/packages/b0/6a/3bae0af06f9b1bae3001c44d64215f5b567877e7aae9ffd45db11c3a7647/ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3926fa117b5e65019853a2969966d11c7175af377a3425991f3fe73784412405", size = 1236015, upload-time = "2026-08-07T11:28:39.14Z" },
++    { url = "https://files.pythonhosted.org/packages/6f/c4/ce2d41a1bc22508e82618901f7e10f2a5e2f9556553fea90624daf9875e2/ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:485f1113af805e9e170b95ef993ca3fbd4f89c04bab25c58b4fc632d854801ab", size = 1432808, upload-time = "2026-08-07T11:28:40.664Z" },
++    { url = "https://files.pythonhosted.org/packages/1a/90/f5058f209756dd70e958b7538aaa82d25d24944baf9ec8ae6f27b06fcacc/ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:3ccebbed24f1281062d5852353c72c47502955926cfcb8345ffb3a44d87ff3d3", size = 1256251, upload-time = "2026-08-07T11:28:42.223Z" },
++    { url = "https://files.pythonhosted.org/packages/bf/32/7f77ea87fa0836daab706ed5cb7f903bb25fa26a77439011aee626af11d8/ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:252f883290d1cdb728eb7fe1d9a7221b88af5a329aae0bc91ddee4dafb820331", size = 1258574, upload-time = "2026-08-07T11:28:43.751Z" },
++    { url = "https://files.pythonhosted.org/packages/eb/5a/75b82ad2725b5e8e8c742732f9e76c6738a292d0709e1f60d10a973730b4/ast_serialize-0.8.0-cp39-abi3-manylinux_2_31_riscv64.whl", hash = "sha256:96abc072ad29db8d02194afd47d68987322622787daceae82398d7b69f3ba2e6", size = 1254075, upload-time = "2026-08-07T11:28:45.28Z" },
++    { url = "https://files.pythonhosted.org/packages/4e/54/8c20ed4eea805516a3fd23dd4a721ce28c64f50f0e4b359969f60a8c97a6/ast_serialize-0.8.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:9118ad3e369727060b2696fc4078f250ecffca4248ba87f537f55cea9f9dce06", size = 1301018, upload-time = "2026-08-07T11:28:46.851Z" },
++    { url = "https://files.pythonhosted.org/packages/cb/5b/9f14430f12fe830b656fb38f8e2e05ee13b02a88967660bef46af0ab22a8/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:f359df4bd921918af8bebd142a376c77511d7151cc8ba852760b587b5a4a54f3", size = 1409951, upload-time = "2026-08-07T11:28:48.312Z" },
++    { url = "https://files.pythonhosted.org/packages/2d/3d/084882eca93c842bd4262591a071ec7f825340644035e51501208cc5a8d4/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:e94f9121d13fa36cbf21314783c77d05ae3a0868decd18cf5233fdcc6de49ac8", size = 1509544, upload-time = "2026-08-07T11:28:49.847Z" },
++    { url = "https://files.pythonhosted.org/packages/ce/73/ea84852096c2036c61cc0b2f97b90242207419f534dc671060ee1c8e05cb/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:54f95b486018d262bcb387a9afd96f0da74508b442762b80c769454a6fbb3ee3", size = 1505671, upload-time = "2026-08-07T11:28:51.239Z" },
++    { url = "https://files.pythonhosted.org/packages/cb/88/287b9a5300c1f2f651d259f670931b63110adc265b7613c885b44c5bc53d/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_ppc64le.whl", hash = "sha256:4c38b915511e32bc718c49dbce98ff9af36bac0ad6a604f58000cd5e3aecdba7", size = 1563685, upload-time = "2026-08-07T11:28:53.112Z" },
++    { url = "https://files.pythonhosted.org/packages/ee/f3/1bc3a79afcf0c2a8d2c37182d0d659d1545a9d7f7f6dc9cf3e63d6c17135/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_riscv64.whl", hash = "sha256:9a2ef9cf12f2de4f1028c42c1dd7d775255e0fb3e5bb48896c97e35ef52366fe", size = 1427977, upload-time = "2026-08-07T11:28:54.418Z" },
++    { url = "https://files.pythonhosted.org/packages/5c/cd/440c798957e14e31776bfeb024d8fafe0bb1d5b89c51c2f067e69938f7b0/ast_serialize-0.8.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:6f18048fe9f6dd266bd577cdec48bdcecb74faaa01fe941324435483b013ed2a", size = 1454335, upload-time = "2026-08-07T11:28:55.968Z" },
++    { url = "https://files.pythonhosted.org/packages/4f/4a/587eb36dcc240a54c8660f599464516b469ecad96f0dbdb6bccbedb50745/ast_serialize-0.8.0-cp39-abi3-win32.whl", hash = "sha256:31883542dd6c94d178f5db3d32fbd69c5eb88b3a7c018e7ac8cc0c45195ddbed", size = 1068858, upload-time = "2026-08-07T11:28:57.541Z" },
++    { url = "https://files.pythonhosted.org/packages/5f/a4/3e887bbd92164e183cb6e412c6a3e9198ddd446d7fe405958293ef5ef49c/ast_serialize-0.8.0-cp39-abi3-win_amd64.whl", hash = "sha256:861794565b06337005c1447ef23103a3d5a627d08bdc827870d00d0b28ef5f51", size = 1111839, upload-time = "2026-08-07T11:28:59Z" },
++    { url = "https://files.pythonhosted.org/packages/25/6c/b400476d3ceba681ab929787edc9554f6d88fcc69435eb681b00fc0457a5/ast_serialize-0.8.0-cp39-abi3-win_arm64.whl", hash = "sha256:b2a5978662fd4db463dfb4b974d2b10ac6430b98f5333aabc7051909df3561d0", size = 1083655, upload-time = "2026-08-07T11:29:00.349Z" },
++]
++
++[[package]]
++name = "colorama"
++version = "0.4.6"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
++]
++
++[[package]]
++name = "iniconfig"
++version = "2.3.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
++]
++
++[[package]]
++name = "librt"
++version = "0.15.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/36/9b/356320fbae2ac8467e21c5e73e1389c80468e4998c62cc7d3536cc51b614/librt-0.15.0.tar.gz", hash = "sha256:4e66cbe84437497d951b799d3e1551291b6fb3d643820a7014b3655d57a59162", size = 214338, upload-time = "2026-08-07T10:49:42.663Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/ba/39/99c25030e782bdfb7a21be8c05254806a2e4bbb05c8d50c2a2130acbfa05/librt-0.15.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:e87bc679f86a99aa3b26e3c78eeb821a247c9a28eae48eaafcc32c3bf4c3bb9e", size = 151021, upload-time = "2026-08-07T10:47:00.057Z" },
++    { url = "https://files.pythonhosted.org/packages/14/43/f4b1bd1b2888798a1409808889a25ea1ba49eaabce7d681ed27734c2df9d/librt-0.15.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:71599e011ac880e8e45d46047d714871894c7d4ab6f25626f8d4f89da21f368d", size = 155267, upload-time = "2026-08-07T10:47:01.311Z" },
++    { url = "https://files.pythonhosted.org/packages/0c/db/3ad9c965c72f1e1d6beeec44ec10a54e17be8ae042fbb4baade16cbadced/librt-0.15.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c802434092b769b1d613ed2e13fac15fbfce1934a74bd10283b03c0fae231cd1", size = 503136, upload-time = "2026-08-07T10:47:02.45Z" },
++    { url = "https://files.pythonhosted.org/packages/4b/07/5888a6d76acd62ebce66c61b74d94e9370b9c32929f111e487bb6546f8ed/librt-0.15.0-cp312-cp312-manylinux2014_i686.manylinux_2_17_i686.manylinux_2_28_i686.whl", hash = "sha256:5500eeae393a184d14e1f35645962c27129d20c81afa4069e6ef826ebc2b3aaa", size = 496670, upload-time = "2026-08-07T10:47:03.675Z" },
++    { url = "https://files.pythonhosted.org/packages/29/39/ab57cc2f5b276156da02bb7f5a8921bada1cb1993ffec99acf811c602c23/librt-0.15.0-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:6ecfc32dfb46fb7b565bcd6abf9412acf978775a998273d22888a6d7953730dd", size = 513688, upload-time = "2026-08-07T10:47:04.981Z" },
++    { url = "https://files.pythonhosted.org/packages/a7/b9/bdbb0b648b5c2befb031f4c6f3b1dd857415e8fb492a25a3c764a6681e6c/librt-0.15.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:89cc46cfd15022e35084355478c9ac809d90b1152222706ac9a7655ec21df6fa", size = 531904, upload-time = "2026-08-07T10:47:06.211Z" },
++    { url = "https://files.pythonhosted.org/packages/93/26/473c2e4b6c104e9e58e27ce95fc8005c8bd4fc36cae4f254371125a92db8/librt-0.15.0-cp312-cp312-manylinux_2_34_riscv64.manylinux_2_39_riscv64.whl", hash = "sha256:d5f51401d102c885b9ca509e62c79b1dbff286e1b9b047fde6f763780789356d", size = 524427, upload-time = "2026-08-07T10:47:07.592Z" },
++    { url = "https://files.pythonhosted.org/packages/26/60/03b3abb82b41714671b907bf6989b228e31e6a8af52dec82b5b0728dc250/librt-0.15.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:cc30523e3f1a23fb7511cc659834a0d01a1042bb9de359bc1c131cc4ec6c9656", size = 543155, upload-time = "2026-08-07T10:47:08.866Z" },
++    { url = "https://files.pythonhosted.org/packages/f2/0e/9bb1f0a4affbd0a1888f4f79dc03ed2a299d9a2c26c59ab2a97dcbf11903/librt-0.15.0-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:59fe030d8ae4a57e3fb7756bf35a858de74e04066fc8555c53d0af979132af81", size = 546890, upload-time = "2026-08-07T10:47:10.327Z" },
++    { url = "https://files.pythonhosted.org/packages/dc/84/6937a280d461f7de6e031ffb02edc2b7c3c90d49d630565ce8ff27cbc5f2/librt-0.15.0-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:5a6526a2a956bbb1e4ae3568c82e650fc99119c66bb011ea60715744955a2b4d", size = 555163, upload-time = "2026-08-07T10:47:11.798Z" },
++    { url = "https://files.pythonhosted.org/packages/bc/95/2a2853c1ee014bf102116e7f897a04beeaeb2461b45b79af98bdfb95f1ef/librt-0.15.0-cp312-cp312-musllinux_1_2_riscv64.whl", hash = "sha256:85ea21ec6730194d67156b0e0b5430ccb1d61f8b8b907e39b37f9812b74a13f0", size = 535812, upload-time = "2026-08-07T10:47:13.279Z" },
++    { url = "https://files.pythonhosted.org/packages/c9/4c/cf9601c1b4c5f09280acd5d83abdb2e68527a2be8257136eb42304218622/librt-0.15.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:1e47b8ba865d7ede071a91a7163073bbaeb72541f1ef8a07d512c45c7b5007f2", size = 573688, upload-time = "2026-08-07T10:47:14.727Z" },
++    { url = "https://files.pythonhosted.org/packages/47/6d/9ac7cbec46189a7625af4b5acbd25f10d827f4141b2002181848c8418923/librt-0.15.0-cp312-cp312-win32.whl", hash = "sha256:a5207ec414d1c4a2a7231b2086970dc036f94293cdf338190984958a013a42f1", size = 106138, upload-time = "2026-08-07T10:47:15.973Z" },
++    { url = "https://files.pythonhosted.org/packages/38/d0/2ae99c83be86ce23f925ac1aeeedc777e97f427c4a8d190c70d0a16e9a87/librt-0.15.0-cp312-cp312-win_amd64.whl", hash = "sha256:73b30cfa976659b3917c8f6153bdb0591c6a9ec6583599fd24a689b690622022", size = 126974, upload-time = "2026-08-07T10:47:17.049Z" },
++    { url = "https://files.pythonhosted.org/packages/5d/ef/dd24f9635c730b86b87587967dda7516b1845e8b17684603d31607fed598/librt-0.15.0-cp312-cp312-win_arm64.whl", hash = "sha256:a54cf9e0ef47b96af580849db5471142200568ce1e02cbf416addab551369570", size = 112292, upload-time = "2026-08-07T10:47:18.222Z" },
++]
++
++[[package]]
++name = "mypy"
++version = "2.3.1"
++source = { registry = "https://pypi.org/simple" }
++dependencies = [
++    { name = "ast-serialize" },
++    { name = "librt", marker = "platform_python_implementation != 'PyPy'" },
++    { name = "mypy-extensions" },
++    { name = "pathspec" },
++    { name = "typing-extensions" },
++]
++sdist = { url = "https://files.pythonhosted.org/packages/82/6a/878cc1097d4035f82bd516658d0c528d2a9955bc7b363afcbd0b07fea11b/mypy-2.3.1.tar.gz", hash = "sha256:47c1b1207258513a9d93495f69c8be9de73916186f0e52703e8c461b7a623419", size = 3992554, upload-time = "2026-08-15T03:03:38.549Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/85/da/d6effc4f808a842d91edc22535dc9e799d2ff6e91449168b7f47a0771f54/mypy-2.3.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a32bbbb940af990d3be0b8af321c7b6815bb1b3b48142fe7459b9cc5f58959ff", size = 14047547, upload-time = "2026-08-15T03:02:57.707Z" },
++    { url = "https://files.pythonhosted.org/packages/e4/e6/478229701dab76f26485fc8ff5d6f241f393da22447400bbc56f6946aebe/mypy-2.3.1-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ff715e45b2231a8e85de1d163d1b42791e4d7aab8f5145f85fee1b710b735aff", size = 14216515, upload-time = "2026-08-15T03:01:26.496Z" },
++    { url = "https://files.pythonhosted.org/packages/8d/fe/7c42327a3b21e84681f691982cbfe43f334a3685f3b683b72c376476c4fa/mypy-2.3.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:858fc57d3d91fa728e33e7ad71def60fc6272694607b306cd3292db53ae39080", size = 15307789, upload-time = "2026-08-15T03:03:31.62Z" },
++    { url = "https://files.pythonhosted.org/packages/59/f4/7e597edbe01b5a56fa958ce541302dcaabfed979966f1dffedbea0ea0fc2/mypy-2.3.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:851833db876e7b650f93719c74b7879a08e338979c96054fdfc3bfd90a486355", size = 15548831, upload-time = "2026-08-15T03:03:15.55Z" },
++    { url = "https://files.pythonhosted.org/packages/a3/52/cb31e084bc0314a1e384bdd677a4b80e55af04ccac077545e2238b9d320a/mypy-2.3.1-cp312-cp312-win_amd64.whl", hash = "sha256:4c5095a327483591c94e0c8d3ef9e50d4ab1369b541eae007c1f23bc2a41f6bb", size = 11226359, upload-time = "2026-08-15T03:03:29.002Z" },
++    { url = "https://files.pythonhosted.org/packages/7a/47/88fcf6217b43fa2da81a8c2611370af18141536a4f0294bbf98b457d456d/mypy-2.3.1-cp312-cp312-win_arm64.whl", hash = "sha256:bbfe022634a2a195406bd469e888d2eaf193b02ba7e607391cd7640374aaae3b", size = 10214707, upload-time = "2026-08-15T03:02:48.807Z" },
++    { url = "https://files.pythonhosted.org/packages/8e/41/9675c7a1e78edecfba0b79e587a52594c56e189368261dc7b3a7fffb9527/mypy-2.3.1-py3-none-any.whl", hash = "sha256:6ed5c7e3419083268e5c9258bd1c1ef91af44a9e89374dbcaf37b775716e72eb", size = 2754338, upload-time = "2026-08-15T03:02:53.4Z" },
++]
++
++[[package]]
++name = "mypy-extensions"
++version = "1.1.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/a2/6e/371856a3fb9d31ca8dac321cda606860fa4548858c0cc45d9d1d4ca2628b/mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558", size = 6343, upload-time = "2025-04-22T14:54:24.164Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/79/7b/2c79738432f5c924bef5071f933bcc9efd0473bac3b4aa584a6f7c1c8df8/mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505", size = 4963, upload-time = "2025-04-22T14:54:22.983Z" },
++]
++
++[[package]]
++name = "ninja"
++version = "1.13.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/43/73/79a0b22fc731989c708068427579e840a6cf4e937fe7ae5c5d0b7356ac22/ninja-1.13.0.tar.gz", hash = "sha256:4a40ce995ded54d9dc24f8ea37ff3bf62ad192b547f6c7126e7e25045e76f978", size = 242558, upload-time = "2025-08-11T15:10:19.421Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/3c/74/d02409ed2aa865e051b7edda22ad416a39d81a84980f544f8de717cab133/ninja-1.13.0-py3-none-macosx_10_9_universal2.whl", hash = "sha256:fa2a8bfc62e31b08f83127d1613d10821775a0eb334197154c4d6067b7068ff1", size = 310125, upload-time = "2025-08-11T15:09:50.971Z" },
++    { url = "https://files.pythonhosted.org/packages/8e/de/6e1cd6b84b412ac1ef327b76f0641aeb5dcc01e9d3f9eee0286d0c34fd93/ninja-1.13.0-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:3d00c692fb717fd511abeb44b8c5d00340c36938c12d6538ba989fe764e79630", size = 177467, upload-time = "2025-08-11T15:09:52.767Z" },
++    { url = "https://files.pythonhosted.org/packages/c8/83/49320fb6e58ae3c079381e333575fdbcf1cca3506ee160a2dcce775046fa/ninja-1.13.0-py3-none-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:be7f478ff9f96a128b599a964fc60a6a87b9fa332ee1bd44fa243ac88d50291c", size = 187834, upload-time = "2025-08-11T15:09:54.115Z" },
++    { url = "https://files.pythonhosted.org/packages/56/c7/ba22748fb59f7f896b609cd3e568d28a0a367a6d953c24c461fe04fc4433/ninja-1.13.0-py3-none-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:60056592cf495e9a6a4bea3cd178903056ecb0943e4de45a2ea825edb6dc8d3e", size = 202736, upload-time = "2025-08-11T15:09:55.745Z" },
++    { url = "https://files.pythonhosted.org/packages/79/22/d1de07632b78ac8e6b785f41fa9aad7a978ec8c0a1bf15772def36d77aac/ninja-1.13.0-py3-none-manylinux2014_s390x.manylinux_2_17_s390x.whl", hash = "sha256:1c97223cdda0417f414bf864cfb73b72d8777e57ebb279c5f6de368de0062988", size = 179034, upload-time = "2025-08-11T15:09:57.394Z" },
++    { url = "https://files.pythonhosted.org/packages/ed/de/0e6edf44d6a04dabd0318a519125ed0415ce437ad5a1ec9b9be03d9048cf/ninja-1.13.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:fb46acf6b93b8dd0322adc3a4945452a4e774b75b91293bafcc7b7f8e6517dfa", size = 180716, upload-time = "2025-08-11T15:09:58.696Z" },
++    { url = "https://files.pythonhosted.org/packages/54/28/938b562f9057aaa4d6bfbeaa05e81899a47aebb3ba6751e36c027a7f5ff7/ninja-1.13.0-py3-none-manylinux_2_28_armv7l.manylinux_2_31_armv7l.whl", hash = "sha256:4be9c1b082d244b1ad7ef41eb8ab088aae8c109a9f3f0b3e56a252d3e00f42c1", size = 146843, upload-time = "2025-08-11T15:10:00.046Z" },
++    { url = "https://files.pythonhosted.org/packages/2a/fb/d06a3838de4f8ab866e44ee52a797b5491df823901c54943b2adb0389fbb/ninja-1.13.0-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:6739d3352073341ad284246f81339a384eec091d9851a886dfa5b00a6d48b3e2", size = 154402, upload-time = "2025-08-11T15:10:01.657Z" },
++    { url = "https://files.pythonhosted.org/packages/31/bf/0d7808af695ceddc763cf251b84a9892cd7f51622dc8b4c89d5012779f06/ninja-1.13.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:11be2d22027bde06f14c343f01d31446747dbb51e72d00decca2eb99be911e2f", size = 552388, upload-time = "2025-08-11T15:10:03.349Z" },
++    { url = "https://files.pythonhosted.org/packages/9d/70/c99d0c2c809f992752453cce312848abb3b1607e56d4cd1b6cded317351a/ninja-1.13.0-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:aa45b4037b313c2f698bc13306239b8b93b4680eb47e287773156ac9e9304714", size = 472501, upload-time = "2025-08-11T15:10:04.735Z" },
++    { url = "https://files.pythonhosted.org/packages/9f/43/c217b1153f0e499652f5e0766da8523ce3480f0a951039c7af115e224d55/ninja-1.13.0-py3-none-musllinux_1_2_i686.whl", hash = "sha256:5f8e1e8a1a30835eeb51db05cf5a67151ad37542f5a4af2a438e9490915e5b72", size = 638280, upload-time = "2025-08-11T15:10:06.512Z" },
++    { url = "https://files.pythonhosted.org/packages/8c/45/9151bba2c8d0ae2b6260f71696330590de5850e5574b7b5694dce6023e20/ninja-1.13.0-py3-none-musllinux_1_2_ppc64le.whl", hash = "sha256:3d7d7779d12cb20c6d054c61b702139fd23a7a964ec8f2c823f1ab1b084150db", size = 642420, upload-time = "2025-08-11T15:10:08.35Z" },
++    { url = "https://files.pythonhosted.org/packages/3c/fb/95752eb635bb8ad27d101d71bef15bc63049de23f299e312878fc21cb2da/ninja-1.13.0-py3-none-musllinux_1_2_riscv64.whl", hash = "sha256:d741a5e6754e0bda767e3274a0f0deeef4807f1fec6c0d7921a0244018926ae5", size = 585106, upload-time = "2025-08-11T15:10:09.818Z" },
++    { url = "https://files.pythonhosted.org/packages/c1/31/aa56a1a286703800c0cbe39fb4e82811c277772dc8cd084f442dd8e2938a/ninja-1.13.0-py3-none-musllinux_1_2_s390x.whl", hash = "sha256:e8bad11f8a00b64137e9b315b137d8bb6cbf3086fbdc43bf1f90fd33324d2e96", size = 707138, upload-time = "2025-08-11T15:10:11.366Z" },
++    { url = "https://files.pythonhosted.org/packages/34/6f/5f5a54a1041af945130abdb2b8529cbef0cdcbbf9bcf3f4195378319d29a/ninja-1.13.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:b4f2a072db3c0f944c32793e91532d8948d20d9ab83da9c0c7c15b5768072200", size = 581758, upload-time = "2025-08-11T15:10:13.295Z" },
++    { url = "https://files.pythonhosted.org/packages/95/97/51359c77527d45943fe7a94d00a3843b81162e6c4244b3579fe8fc54cb9c/ninja-1.13.0-py3-none-win32.whl", hash = "sha256:8cfbb80b4a53456ae8a39f90ae3d7a2129f45ea164f43fadfa15dc38c4aef1c9", size = 267201, upload-time = "2025-08-11T15:10:15.158Z" },
++    { url = "https://files.pythonhosted.org/packages/29/45/c0adfbfb0b5895aa18cec400c535b4f7ff3e52536e0403602fc1a23f7de9/ninja-1.13.0-py3-none-win_amd64.whl", hash = "sha256:fb8ee8719f8af47fed145cced4a85f0755dd55d45b2bddaf7431fa89803c5f3e", size = 309975, upload-time = "2025-08-11T15:10:16.697Z" },
++    { url = "https://files.pythonhosted.org/packages/df/93/a7b983643d1253bb223234b5b226e69de6cda02b76cdca7770f684b795f5/ninja-1.13.0-py3-none-win_arm64.whl", hash = "sha256:3c0b40b1f0bba764644385319028650087b4c1b18cdfa6f45cb39a3669b81aa9", size = 290806, upload-time = "2025-08-11T15:10:18.018Z" },
++]
++
++[[package]]
++name = "packaging"
++version = "26.3"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz", hash = "sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79", size = 313412, upload-time = "2026-08-04T18:15:28.737Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl", hash = "sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c", size = 129956, upload-time = "2026-08-04T18:15:27.159Z" },
++]
++
++[[package]]
++name = "pathspec"
++version = "1.1.1"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz", hash = "sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a", size = 135180, upload-time = "2026-04-27T01:46:08.907Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl", hash = "sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189", size = 57328, upload-time = "2026-04-27T01:46:07.06Z" },
++]
++
++[[package]]
++name = "pluggy"
++version = "1.6.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
++]
++
++[[package]]
++name = "pygments"
++version = "2.21.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/49/2e/ced460408999b33da6b31b0021b0f37d329e202d4169aeb164493778f25b/pygments-2.21.0.tar.gz", hash = "sha256:610ca751c9bc2492b38eb9a38a7fbc93edbbb2d7182edaf34e66ae493dee5c8c", size = 5005329, upload-time = "2026-08-17T08:02:48.824Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl", hash = "sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9", size = 1250147, upload-time = "2026-08-17T08:02:44.912Z" },
++]
++
++[[package]]
++name = "pytest"
++version = "9.1.1"
++source = { registry = "https://pypi.org/simple" }
++dependencies = [
++    { name = "colorama", marker = "sys_platform == 'win32'" },
++    { name = "iniconfig" },
++    { name = "packaging" },
++    { name = "pluggy" },
++    { name = "pygments" },
++]
++sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
++]
++
++[[package]]
++name = "ruff"
++version = "0.16.4"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/00/8f/d8074b1f25e003164087a8bfe79a0f1a3945135764dbb6aaab04103dcaf9/ruff-0.16.4.tar.gz", hash = "sha256:13171aa9d9af2240ee3504e639de73122c67e74036de5ba2e1d01422cd17e3dc", size = 4899731, upload-time = "2026-08-20T17:43:59.196Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/ff/80/779895ef584e089d22f2c6df0d0e99a65ec2df0805f1fffd439415b8c1f0/ruff-0.16.4-py3-none-linux_armv6l.whl", hash = "sha256:df4075f71ddac40b9934af60c3ec8a53047dd5a5fdc43224e6e4e8e9a27cb6f7", size = 10006909, upload-time = "2026-08-20T17:43:16.888Z" },
++    { url = "https://files.pythonhosted.org/packages/a9/e6/f553199b5e8927a05cb5c422d921fd0656b29ab976e91c44802107c6b0da/ruff-0.16.4-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:0c95538517af68004306b0fb3214ff2f2af67a65092aee77cd9eb86db6656604", size = 10240201, upload-time = "2026-08-20T17:43:19.337Z" },
++    { url = "https://files.pythonhosted.org/packages/1c/70/4a6dc4bb34da4dee35e30f09bbd1bfbdd26f33b62fb9b8df31f08a199cd2/ruff-0.16.4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:963f83df8e69e575b64d67dd447ebbc917db41a14bf38d4593a4183e7aaa8255", size = 9835122, upload-time = "2026-08-20T17:43:21.708Z" },
++    { url = "https://files.pythonhosted.org/packages/24/12/c6e22d686372c15bcb7af99831f1a1be96df696491babf4f24e4f942c527/ruff-0.16.4-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:32a5057c7ff3f6e6480a48fccfb3a412a690f48a3d03ac5cf08177d6c2da3ade", size = 9977162, upload-time = "2026-08-20T17:43:24.236Z" },
++    { url = "https://files.pythonhosted.org/packages/46/49/72b10ec912f5ab5854992eaf7aa7cd36729b6937d9dc4e0fb41b3bf428ec/ruff-0.16.4-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:b3dce8d9b0c57c265b91885a66a567d8ea1372e8eb4e250fa8e5e3f579e99cff", size = 9829789, upload-time = "2026-08-20T17:43:26.966Z" },
++    { url = "https://files.pythonhosted.org/packages/fa/80/0f30e32e7f6ee26edc39075502db9d368d788a44a79b55f763eb4ab03796/ruff-0.16.4-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7dc651db49283c69f8e72c834eec4fe5573e4c646856aebece0ce385dceb2a80", size = 10527949, upload-time = "2026-08-20T17:43:29.384Z" },
++    { url = "https://files.pythonhosted.org/packages/52/3d/86e8ad3542169e56cac3859a343afdb9df2ad54d35a59ce1e67baee83421/ruff-0.16.4-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3817b87dbcabc92f13b05019257c5b89b5b4d51b5fb20f56fb5235ceb723cd07", size = 11333695, upload-time = "2026-08-20T17:43:31.872Z" },
++    { url = "https://files.pythonhosted.org/packages/d0/16/481c29b380c20a0054a8261066665e1b3488e23636c49d0a43e75975b9bb/ruff-0.16.4-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:e9fce1499134b2c8c68e5166f95705a5812062bb93aacc5f9873bb1a27084bc7", size = 10727741, upload-time = "2026-08-20T17:43:34.596Z" },
++    { url = "https://files.pythonhosted.org/packages/5e/b6/56bc0b8cf45b54b28b3a5e6381c8945d51b5b18adf659454c32295209a31/ruff-0.16.4-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f2d812e482f5a7e02eee26cd73d2a37ebbdf47d795ea63ba1b89110ae93e9fb3", size = 10286522, upload-time = "2026-08-20T17:43:37.288Z" },
++    { url = "https://files.pythonhosted.org/packages/e8/8b/b345b4fb110f2fbe2bd31eabd271e5e8b3b7e4ee6c0e02f2dc6be78db000/ruff-0.16.4-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:6baaf984aa7976edf93d3b627fe2d1d22ee94bbca05fa6f90fc76d73924e3454", size = 10584182, upload-time = "2026-08-20T17:43:39.984Z" },
++    { url = "https://files.pythonhosted.org/packages/29/e5/827b34041c35f58774a9681a4213994c164fc987800f4dddabcf451da0bf/ruff-0.16.4-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:bdfcf0b28662eb890372d50f92c283bb94e67e7635ed93c7fd533970acff7b2b", size = 10134195, upload-time = "2026-08-20T17:43:42.351Z" },
++    { url = "https://files.pythonhosted.org/packages/0f/10/d0bffcdd6729b87afc82ba0ef377173356a7dc8e972f5179968cf2fdf98c/ruff-0.16.4-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:b66b02cb9b04f537643cadf5768e5f98dc461890d530cb67113d71c8c76e605d", size = 9825821, upload-time = "2026-08-20T17:43:44.532Z" },
++    { url = "https://files.pythonhosted.org/packages/f5/32/0db2a863b796ca62d83e92a07a3ccf00921b14db02059347576a2fda3d4b/ruff-0.16.4-py3-none-musllinux_1_2_i686.whl", hash = "sha256:8528bf9a4b291a60bf02ea453511e8ce6215bd2b982ee80405b66b008b6c30a0", size = 10267658, upload-time = "2026-08-20T17:43:46.989Z" },
++    { url = "https://files.pythonhosted.org/packages/b2/a0/fbdeb59e48c6261f523e56c8f12e9c08fbe693786595cc7e3959207a9232/ruff-0.16.4-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:fbd85d2875fdd67e833213a651f613bbf25303abf6aa822a5121f4531195678d", size = 10697071, upload-time = "2026-08-20T17:43:49.891Z" },
++    { url = "https://files.pythonhosted.org/packages/aa/28/0c6dd865859c6d17bc8ccc34cb72b0e02d6c7eb25e8a1e22b5bea681e2c0/ruff-0.16.4-py3-none-win32.whl", hash = "sha256:312769988007aaeb8e189b443ccdd03c0e6374489e053467be6d96518ebff76e", size = 10021687, upload-time = "2026-08-20T17:43:52.281Z" },
++    { url = "https://files.pythonhosted.org/packages/a3/03/e724450f621698117f9aa6dd241c94d0274ae96781378dc86745ae29f0e7/ruff-0.16.4-py3-none-win_amd64.whl", hash = "sha256:05d9d27a18c4bcbefada602480ec9e01e0bc949d432e0ced5df77edac195919c", size = 10567657, upload-time = "2026-08-20T17:43:54.78Z" },
++    { url = "https://files.pythonhosted.org/packages/0e/fe/da8b9e1347696bb22120b77280ec5ce25d500ca5cb39d5ad6e5c18de19c1/ruff-0.16.4-py3-none-win_arm64.whl", hash = "sha256:a3a61621c9b6f6a89573e938a080e648f1695baa3f58570a3a707bc51ff65a21", size = 10451579, upload-time = "2026-08-20T17:43:57.135Z" },
++]
++
++[[package]]
++name = "typing-extensions"
++version = "4.16.0"
++source = { registry = "https://pypi.org/simple" }
++sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555, upload-time = "2026-07-02T08:40:05.92Z" }
++wheels = [
++    { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571, upload-time = "2026-07-02T08:40:04.659Z" },
++]
