@@ -1,0 +1,10 @@
+{
+  "schema": "airidl.snapshot/v1",
+  "day": "day002",
+  "parent": "day001",
+  "project_version": "0.1.0.dev1",
+  "created_at": "2026-08-31T02:04:52.373199+00:00",
+  "source": {
+    "canonical_file_count": 29
+  }
+}
